@@ -1,27 +1,82 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import Navbar from './components/Navbar';
 import PrivateRoute from './components/PrivateRoute';
+import PageTransition from './components/PageTransition';
+import AppIntro from './components/AppIntro';
+import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import LoginPageNew from './pages/LoginPageNew';
 import RegisterPageNew from './pages/RegisterPageNew';
 import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
+import TransparencyPage from './pages/TransparencyPage';
+import OverdueIssuesPage from './pages/OverdueIssuesPage';
+import GrievanceFormPage from './pages/GrievanceFormPage';
 import './index.css';
 
-export default function App() {
+function AnimatedRoutes() {
+  const location = useLocation();
+
   return (
-    <Router>
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPageNew />} />
-        <Route path="/register" element={<RegisterPageNew />} />
+    <AnimatePresence mode="wait" initial={false}>
+      <Routes location={location} key={location.pathname}>
+        <Route
+          path="/"
+          element={
+            <PageTransition>
+              <HomePage />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/transparency"
+          element={
+            <PageTransition>
+              <TransparencyPage />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/transparency/issues"
+          element={
+            <PageTransition>
+              <OverdueIssuesPage />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/file-grievance"
+          element={
+            <PageTransition>
+              <GrievanceFormPage />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <PageTransition>
+              <LoginPageNew />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PageTransition>
+              <RegisterPageNew />
+            </PageTransition>
+          }
+        />
         <Route
           path="/dashboard"
           element={
             <PrivateRoute>
-              <DashboardPage />
+              <PageTransition>
+                <DashboardPage />
+              </PageTransition>
             </PrivateRoute>
           }
         />
@@ -29,11 +84,26 @@ export default function App() {
           path="/admin"
           element={
             <PrivateRoute>
-              <AdminPage />
+              <PageTransition>
+                <AdminPage />
+              </PageTransition>
             </PrivateRoute>
           }
         />
       </Routes>
+    </AnimatePresence>
+  );
+}
+
+export default function App() {
+  const [showIntro, setShowIntro] = React.useState(true);
+
+  return (
+    <Router>
+      <AppIntro show={showIntro} onDone={() => setShowIntro(false)} />
+      <Navbar />
+      <AnimatedRoutes />
+      <Footer />
     </Router>
   );
 }

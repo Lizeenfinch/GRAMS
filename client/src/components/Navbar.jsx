@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { motion, useReducedMotion } from 'framer-motion';
 import useAuthStore from '../store/authStore';
+import GramsLogo from './GramsLogo';
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuthStore();
@@ -9,6 +11,7 @@ export default function Navbar() {
   const [hoveredLink, setHoveredLink] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const shouldReduceMotion = useReducedMotion();
 
   const handleLogout = () => {
     logout();
@@ -22,6 +25,18 @@ export default function Navbar() {
 
   const isActive = (path) => location.pathname === path;
 
+  const activeKey = useMemo(() => {
+    if (isActive('/')) return 'home';
+    if (isActive('/transparency')) return 'transparency';
+    return null;
+  }, [location.pathname]);
+
+  const underlineTarget = hoveredLink || activeKey;
+
+  const underlineTransition = shouldReduceMotion
+    ? { duration: 0 }
+    : { type: 'spring', stiffness: 380, damping: 36, mass: 0.8 };
+
   return (
     <nav className="fixed top-0 w-full z-50 glass-nav transition-all duration-300 ease-in-out">
       <div className="w-full px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -31,10 +46,8 @@ export default function Navbar() {
           to="/" 
           className="flex items-center gap-2 group shrink-0 hover:opacity-100 opacity-90 transition-all duration-300 ease-out hover:scale-105 active:scale-95"
         >
-          <div className="bg-gradient-to-tr from-green-700 to-green-600 text-white p-1.5 rounded-lg shadow-lg group-hover:shadow-green-600/50 group-hover:scale-110 transition-all duration-300 ease-out">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M13 6.5a1 1 0 11-2 0 1 1 0 012 0zM13 10a1 1 0 11-2 0 1 1 0 012 0zM13 13.5a1 1 0 11-2 0 1 1 0 012 0zM7 9a2 2 0 100-4 2 2 0 000 4zM7 15a2 2 0 100-4 2 2 0 000 4z" />
-            </svg>
+          <div className="shadow-lg group-hover:shadow-green-600/50 group-hover:scale-110 transition-all duration-300 ease-out rounded-lg">
+            <GramsLogo size={30} />
           </div>
           <div className="hidden sm:block transition-all duration-300">
             <h1 className="font-bold text-base text-slate-900 leading-none group-hover:text-green-600 transition-colors duration-300">GRAMS</h1>
@@ -59,24 +72,36 @@ export default function Navbar() {
                 <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
               </svg>
               <span className="hidden lg:inline text-xs">Home</span>
-              <span className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-10 h-px bg-green-600 rounded-full transition-all duration-500 ease-out origin-center ${
-                isActive('/') || hoveredLink === 'home' ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'
-              }`}></span>
+              {underlineTarget === 'home' && (
+                <motion.span
+                  layoutId="nav-underline"
+                  className="absolute -bottom-1.5 left-3 right-3 h-px bg-green-600 rounded-full"
+                  transition={underlineTransition}
+                />
+              )}
             </Link>
-            <button 
+            <Link 
+              to="/transparency"
               onMouseEnter={() => setHoveredLink('transparency')}
               onMouseLeave={() => setHoveredLink(null)}
-              className="top-nav-link px-3 py-1.5 rounded-full text-slate-700 font-medium flex items-center gap-1 transition-all duration-300 ease-out hover:bg-green-50 hover:text-green-600 hover:scale-105 active:scale-95 relative group"
+              onClick={handleNavClick}
+              className={`top-nav-link px-3 py-1.5 rounded-full text-slate-700 font-medium flex items-center gap-1 transition-all duration-300 ease-out active:scale-95 relative group ${
+                isActive('/transparency') ? 'bg-green-100 text-green-700' : 'hover:bg-green-50 hover:text-green-600 hover:scale-105'
+              }`}
             >
               <svg className="w-4 h-4 transition-transform duration-300" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
                 <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
               </svg>
               <span className="hidden lg:inline text-xs">Transparency</span>
-              <span className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-10 h-px bg-green-600 rounded-full transition-all duration-500 ease-out origin-center ${
-                hoveredLink === 'transparency' ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'
-              }`}></span>
-            </button>
+              {underlineTarget === 'transparency' && (
+                <motion.span
+                  layoutId="nav-underline"
+                  className="absolute -bottom-1.5 left-3 right-3 h-px bg-green-600 rounded-full"
+                  transition={underlineTransition}
+                />
+              )}
+            </Link>
             <button 
               onMouseEnter={() => setHoveredLink('community')}
               onMouseLeave={() => setHoveredLink(null)}
@@ -86,9 +111,13 @@ export default function Navbar() {
                 <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v2h8v-2zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-2a4 4 0 00-8 0v2h8z" />
               </svg>
               <span className="hidden lg:inline text-xs">Community</span>
-              <span className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-10 h-px bg-green-600 rounded-full transition-all duration-500 ease-out origin-center ${
-                hoveredLink === 'community' ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'
-              }`}></span>
+              {underlineTarget === 'community' && (
+                <motion.span
+                  layoutId="nav-underline"
+                  className="absolute -bottom-1.5 left-3 right-3 h-px bg-green-600 rounded-full"
+                  transition={underlineTransition}
+                />
+              )}
             </button>
             <button 
               onMouseEnter={() => setHoveredLink('track')}
@@ -99,9 +128,13 @@ export default function Navbar() {
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
               </svg>
               <span className="hidden lg:inline text-xs">Track</span>
-              <span className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-10 h-px bg-green-600 rounded-full transition-all duration-500 ease-out origin-center ${
-                hoveredLink === 'track' ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'
-              }`}></span>
+              {underlineTarget === 'track' && (
+                <motion.span
+                  layoutId="nav-underline"
+                  className="absolute -bottom-1.5 left-3 right-3 h-px bg-green-600 rounded-full"
+                  transition={underlineTransition}
+                />
+              )}
             </button>
           </div>
 
@@ -119,9 +152,13 @@ export default function Navbar() {
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
               <span className="hidden lg:inline text-xs">Help</span>
-              <span className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-10 h-px bg-green-600 rounded-full transition-all duration-500 ease-out origin-center ${
-                hoveredLink === 'help' ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'
-              }`}></span>
+              {underlineTarget === 'help' && (
+                <motion.span
+                  layoutId="nav-underline"
+                  className="absolute -bottom-1.5 left-3 right-3 h-px bg-green-600 rounded-full"
+                  transition={underlineTransition}
+                />
+              )}
             </button>
             <button 
               onMouseEnter={() => setHoveredLink('performance')}
@@ -132,9 +169,13 @@ export default function Navbar() {
                 <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
               </svg>
               <span className="hidden lg:inline text-xs">Performance</span>
-              <span className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-10 h-px bg-green-600 rounded-full transition-all duration-500 ease-out origin-center ${
-                hoveredLink === 'performance' ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'
-              }`}></span>
+              {underlineTarget === 'performance' && (
+                <motion.span
+                  layoutId="nav-underline"
+                  className="absolute -bottom-1.5 left-3 right-3 h-px bg-green-600 rounded-full"
+                  transition={underlineTransition}
+                />
+              )}
             </button>
             <button 
               onMouseEnter={() => setHoveredLink('status')}
@@ -145,9 +186,13 @@ export default function Navbar() {
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
               <span className="hidden lg:inline text-xs">Status</span>
-              <span className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-10 h-px bg-green-600 rounded-full transition-all duration-500 ease-out origin-center ${
-                hoveredLink === 'status' ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'
-              }`}></span>
+              {underlineTarget === 'status' && (
+                <motion.span
+                  layoutId="nav-underline"
+                  className="absolute -bottom-1.5 left-3 right-3 h-px bg-green-600 rounded-full"
+                  transition={underlineTransition}
+                />
+              )}
             </button>
           </div>
         </div>
@@ -185,9 +230,17 @@ export default function Navbar() {
               </div>
 
               {/* Dropdown Menu */}
-              <div className={`absolute top-full right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg p-2 z-50 min-w-max transition-all duration-300 ease-out origin-top ${
-                activeDropdown ? 'opacity-100 scale-y-100 visible' : 'opacity-0 scale-y-95 invisible'
-              }`}>
+              <motion.div
+                className="absolute top-full right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg p-2 z-50 min-w-max origin-top"
+                initial={false}
+                animate={
+                  shouldReduceMotion
+                    ? { opacity: activeDropdown ? 1 : 0 }
+                    : { opacity: activeDropdown ? 1 : 0, scaleY: activeDropdown ? 1 : 0.95, y: activeDropdown ? 0 : -4 }
+                }
+                transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                style={{ pointerEvents: activeDropdown ? 'auto' : 'none' }}
+              >
                 <Link 
                   to="/profile" 
                   className="block w-full text-left px-3 py-2 hover:bg-green-50 rounded text-xs text-slate-700 font-semibold transition-all duration-200 hover:text-green-600 hover:translate-x-1 relative group"
@@ -212,7 +265,7 @@ export default function Navbar() {
                   🚪 Logout
                   <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-red-500 rounded-full transition-all duration-300 group-hover:w-full"></span>
                 </button>
-              </div>
+              </motion.div>
             </div>
           ) : (
             <>
@@ -229,7 +282,7 @@ export default function Navbar() {
 
           {/* New Complaint Button */}
           <Link 
-            to="/grievance" 
+            to="/file-grievance" 
             className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg hover:scale-110 active:scale-95 relative group overflow-hidden"
             onClick={handleNavClick}
           >

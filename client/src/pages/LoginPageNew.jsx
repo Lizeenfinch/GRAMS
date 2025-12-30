@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from '../api/axios';
 import useAuthStore from '../store/authStore';
 import { signInWithGoogle } from '../config/firebaseConfig';
+import Reveal from '../components/Reveal';
+import MotionImage from '../components/MotionImage';
 
 export default function LoginPageNew() {
   const [activeTab, setActiveTab] = useState('citizen');
@@ -185,7 +187,7 @@ export default function LoginPageNew() {
   };
 
   return (
-    <section className="min-h-[calc(100vh-64px) mt-[60px] relative overflow-hidden flex items-center justify-center py-12 px-4">
+    <section className="min-h-[calc(100vh-64px)] mt-[60px] relative overflow-hidden flex items-center justify-center py-12 px-4">
       
       {/* Background with Nature Theme */}
       <div className="absolute inset-0 bg-gradient-to-br from-lime-50 via-green-50 to-yellow-50">
@@ -206,35 +208,40 @@ export default function LoginPageNew() {
               
               <div className="relative z-10">
                 {/* Logo */}
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30 flex-shrink-0">
-                    <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
-                    </svg>
+                <Reveal delay={0.05}>
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30 flex-shrink-0">
+                      <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h1 className="font-bold text-3xl tracking-tight">GRAMS</h1>
+                      <p className="text-xs text-green-100 uppercase tracking-wider font-semibold">Nexus TechSol</p>
+                    </div>
                   </div>
-                  <div>
-                    <h1 className="font-bold text-3xl tracking-tight">GRAMS</h1>
-                    <p className="text-xs text-green-100 uppercase tracking-wider font-semibold">Nexus TechSol</p>
-                  </div>
-                </div>
+                </Reveal>
 
                 {/* Welcome Text */}
-                <div className="mb-6">
-                  <h2 className="text-4xl font-extrabold mb-3 leading-tight">Welcome back</h2>
-                  <p className="text-green-100 text-sm leading-relaxed max-w-md">
-                    Secure access for Citizens, Engineers, and Administrators to manage grievances and track real-time progress.
-                  </p>
-                </div>
+                <Reveal delay={0.1}>
+                  <div className="mb-6">
+                    <h2 className="text-4xl font-extrabold mb-3 leading-tight">Welcome back</h2>
+                    <p className="text-green-100 text-sm leading-relaxed max-w-md">
+                      Secure access for Citizens, Engineers, and Administrators to manage grievances and track real-time progress.
+                    </p>
+                  </div>
+                </Reveal>
 
                 {/* Image with better alignment */}
                 <div className="relative h-52 mb-4">
                   <div className="absolute inset-0 bg-gradient-to-t from-green-600/80 to-transparent rounded-2xl z-10"></div>
-                  <img 
+                  <MotionImage
                     src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=500&h=250&fit=crop&auto=format" 
                     alt="Digital Governance" 
                     className="rounded-2xl w-full h-full object-cover shadow-lg border-4 border-white/20"
+                    hoverScale={1.03}
                   />
-                  <div className="absolute bottom-4 left-4 right-4 z-20 text-white">
+                  <Reveal className="absolute bottom-4 left-4 right-4 z-20 text-white" delay={0.12}>
                     <div className="flex items-center gap-2 mb-3">
                       <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
@@ -249,7 +256,7 @@ export default function LoginPageNew() {
                         100% Transparent
                       </div>
                     </div>
-                  </div>
+                  </Reveal>
                 </div>
               </div>
 
@@ -279,63 +286,65 @@ export default function LoginPageNew() {
             <div className="lg:w-1/2 bg-gradient-to-br from-white to-green-50/30 p-7 flex flex-col justify-start overflow-y-auto max-h-[520px]">
               
               {/* Tabs */}
-              <div className="flex gap-6 border-b-2 border-green-100 mb-8 pb-4">
-                <button
-                  onClick={() => {
-                    setActiveTab('citizen');
-                    setOtpSent(false);
-                    setError('');
-                    setOtp('');
-                    setFormData(prev => ({ ...prev, citizenPhone: '' }));
-                  }}
-                  className={`cursor-pointer transition-all font-bold flex items-center gap-2 text-sm ${
-                    activeTab === 'citizen'
-                      ? 'text-green-600 border-b-2 border-green-600 -mb-4'
-                      : 'text-slate-600 hover:text-green-600'
-                  }`}
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                  </svg>
-                  <span className="hidden sm:inline">Citizen</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab('admin');
-                    setError('');
-                  }}
-                  className={`cursor-pointer transition-all font-bold flex items-center gap-2 text-sm ${
-                    activeTab === 'admin'
-                      ? 'text-green-600 border-b-2 border-green-600 -mb-4'
-                      : 'text-slate-600 hover:text-green-600'
-                  }`}
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
-                  </svg>
-                  <span className="hidden sm:inline">Official</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab('engineer');
-                    setError('');
-                  }}
-                  className={`cursor-pointer transition-all font-bold flex items-center gap-2 text-sm ${
-                    activeTab === 'engineer'
-                      ? 'text-orange-600 border-b-2 border-orange-600 -mb-4'
-                      : 'text-slate-600 hover:text-orange-600'
-                  }`}
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.6 2.6c-.77-1.22-2.05-2.1-3.5-2.1-2.3 0-4 1.7-4 4s1.7 4 4 4c1.45 0 2.73-.88 3.5-2.1.14.2.26.4.42.6.72 1.12 1.88 1.86 3.2 1.86 2.3 0 4-1.7 4-4s-1.7-4-4-4c-1.32 0-2.48.74-3.2 1.86-.16.2-.28.4-.42.6zM5.5 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z" />
-                  </svg>
-                  <span className="hidden sm:inline">Engineer</span>
-                </button>
-              </div>
+              <Reveal delay={0.05}>
+                <div className="flex gap-6 border-b-2 border-green-100 mb-8 pb-4">
+                  <button
+                    onClick={() => {
+                      setActiveTab('citizen');
+                      setOtpSent(false);
+                      setError('');
+                      setOtp('');
+                      setFormData(prev => ({ ...prev, citizenPhone: '' }));
+                    }}
+                    className={`cursor-pointer transition-all font-bold flex items-center gap-2 text-sm ${
+                      activeTab === 'citizen'
+                        ? 'text-green-600 border-b-2 border-green-600 -mb-4'
+                        : 'text-slate-600 hover:text-green-600'
+                    }`}
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                    </svg>
+                    <span className="hidden sm:inline">Citizen</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('admin');
+                      setError('');
+                    }}
+                    className={`cursor-pointer transition-all font-bold flex items-center gap-2 text-sm ${
+                      activeTab === 'admin'
+                        ? 'text-green-600 border-b-2 border-green-600 -mb-4'
+                        : 'text-slate-600 hover:text-green-600'
+                    }`}
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
+                    </svg>
+                    <span className="hidden sm:inline">Official</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('engineer');
+                      setError('');
+                    }}
+                    className={`cursor-pointer transition-all font-bold flex items-center gap-2 text-sm ${
+                      activeTab === 'engineer'
+                        ? 'text-orange-600 border-b-2 border-orange-600 -mb-4'
+                        : 'text-slate-600 hover:text-orange-600'
+                    }`}
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.6 2.6c-.77-1.22-2.05-2.1-3.5-2.1-2.3 0-4 1.7-4 4s1.7 4 4 4c1.45 0 2.73-.88 3.5-2.1.14.2.26.4.42.6.72 1.12 1.88 1.86 3.2 1.86 2.3 0 4-1.7 4-4s-1.7-4-4-4c-1.32 0-2.48.74-3.2 1.86-.16.2-.28.4-.42.6zM5.5 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z" />
+                    </svg>
+                    <span className="hidden sm:inline">Engineer</span>
+                  </button>
+                </div>
+              </Reveal>
 
               {/* CITIZEN LOGIN FORM */}
               {activeTab === 'citizen' && (
-                <div className="animate-fadeIn">
+                <Reveal>
                   <h3 className="text-xl font-bold text-slate-900 mb-4">Citizen Login</h3>
                   
                   {error && (
@@ -355,7 +364,12 @@ export default function LoginPageNew() {
                           onClick={() => handleSocialLogin('Google')}
                           className="flex items-center justify-center gap-2 py-2.5 border-2 border-green-200 rounded-lg hover:bg-green-50 transition text-sm font-semibold text-slate-700 hover:border-green-400"
                         >
-                          <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-4 h-4" alt="Google" />
+                          <MotionImage
+                            src="https://www.svgrepo.com/show/475656/google-color.svg"
+                            className="w-4 h-4"
+                            alt="Google"
+                            hoverScale={1}
+                          />
                           Google
                         </button>
                         <button
@@ -479,7 +493,7 @@ export default function LoginPageNew() {
                       Sign Up Here
                     </Link>
                   </p>
-                </div>
+                </Reveal>
               )}
 
               {/* ADMIN LOGIN FORM */}

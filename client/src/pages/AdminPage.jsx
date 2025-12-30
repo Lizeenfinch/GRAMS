@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../api/axios';
 import useAuthStore from '../store/authStore';
+import GramsLogo from '../components/GramsLogo';
+import Reveal from '../components/Reveal';
 
 export default function AdminPage() {
   const [stats, setStats] = useState(null);
@@ -65,8 +67,8 @@ export default function AdminPage() {
       <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-gradient-to-b from-slate-800 to-slate-900 border-r border-slate-700 transition-all duration-300 fixed h-screen mt-16`}>
         <div className="p-4">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-              G
+            <div className="w-10 h-10 flex items-center justify-center">
+              <GramsLogo size={40} />
             </div>
             {sidebarOpen && <span className="text-white font-bold text-lg">GRAMS</span>}
           </div>
@@ -104,29 +106,33 @@ export default function AdminPage() {
       <div className={`${sidebarOpen ? 'ml-64' : 'ml-20'} flex-1 transition-all duration-300`}>
         {/* Top Bar */}
         <div className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-16 z-40">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-slate-100 rounded-lg transition"
-            >
-              {sidebarOpen ? '◀' : '▶'}
-            </button>
-            <h1 className="text-2xl font-bold text-slate-900">
-              {menuItems.find(m => m.id === activeTab)?.label}
-            </h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-slate-600">Admin</span>
-            <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-full"></div>
-          </div>
+          <Reveal className="w-full flex items-center justify-between" delay={0.03}>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2 hover:bg-slate-100 rounded-lg transition"
+              >
+                {sidebarOpen ? '◀' : '▶'}
+              </button>
+              <h1 className="text-2xl font-bold text-slate-900">
+                {menuItems.find(m => m.id === activeTab)?.label}
+              </h1>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-slate-600">Admin</span>
+              <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-full"></div>
+            </div>
+          </Reveal>
         </div>
 
         {/* Content Area */}
         <div className="p-8">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl mb-6">
-              {error}
-            </div>
+            <Reveal>
+              <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl mb-6">
+                {error}
+              </div>
+            </Reveal>
           )}
 
           {loading ? (
@@ -141,78 +147,83 @@ export default function AdminPage() {
               {activeTab === 'overview' && (
                 <div className="space-y-8">
                   {/* Stats Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-slate-600 text-sm font-medium">Total Users</p>
-                        <span className="text-2xl">👥</span>
+                  <Reveal delay={0.03}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-slate-600 text-sm font-medium">Total Users</p>
+                          <span className="text-2xl">👥</span>
+                        </div>
+                        <p className="text-3xl font-bold text-slate-900">{stats?.totalUsers || 0}</p>
+                        <p className="text-xs text-slate-500 mt-2">Active platform users</p>
                       </div>
-                      <p className="text-3xl font-bold text-slate-900">{stats?.totalUsers || 0}</p>
-                      <p className="text-xs text-slate-500 mt-2">Active platform users</p>
-                    </div>
 
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-slate-600 text-sm font-medium">Total Grievances</p>
-                        <span className="text-2xl">📋</span>
+                      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-slate-600 text-sm font-medium">Total Grievances</p>
+                          <span className="text-2xl">📋</span>
+                        </div>
+                        <p className="text-3xl font-bold text-slate-900">{stats?.totalGrievances || 0}</p>
+                        <p className="text-xs text-slate-500 mt-2">All submissions</p>
                       </div>
-                      <p className="text-3xl font-bold text-slate-900">{stats?.totalGrievances || 0}</p>
-                      <p className="text-xs text-slate-500 mt-2">All submissions</p>
-                    </div>
 
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-slate-600 text-sm font-medium">Resolved</p>
-                        <span className="text-2xl">✅</span>
+                      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-slate-600 text-sm font-medium">Resolved</p>
+                          <span className="text-2xl">✅</span>
+                        </div>
+                        <p className="text-3xl font-bold text-slate-900">{stats?.resolvedGrievances || 0}</p>
+                        <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2">
+                          <div
+                            className="bg-green-600 h-1.5 rounded-full"
+                            style={{
+                              width: `${stats?.totalGrievances ? (stats.resolvedGrievances / stats.totalGrievances * 100) : 0}%`
+                            }}
+                          ></div>
+                        </div>
                       </div>
-                      <p className="text-3xl font-bold text-slate-900">{stats?.resolvedGrievances || 0}</p>
-                      <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2">
-                        <div
-                          className="bg-green-600 h-1.5 rounded-full"
-                          style={{
-                            width: `${stats?.totalGrievances ? (stats.resolvedGrievances / stats.totalGrievances * 100) : 0}%`
-                          }}
-                        ></div>
-                      </div>
-                    </div>
 
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-slate-600 text-sm font-medium">Open</p>
-                        <span className="text-2xl">⏳</span>
+                      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-slate-600 text-sm font-medium">Open</p>
+                          <span className="text-2xl">⏳</span>
+                        </div>
+                        <p className="text-3xl font-bold text-slate-900">{stats?.openGrievances || 0}</p>
+                        <p className="text-xs text-slate-500 mt-2">Pending action</p>
                       </div>
-                      <p className="text-3xl font-bold text-slate-900">{stats?.openGrievances || 0}</p>
-                      <p className="text-xs text-slate-500 mt-2">Pending action</p>
                     </div>
-                  </div>
+                  </Reveal>
 
                   {/* Quick Stats */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
-                      <p className="text-green-700 font-semibold mb-2">Resolution Rate</p>
-                      <p className="text-4xl font-bold text-green-600">
-                        {stats?.totalGrievances ? Math.round((stats.resolvedGrievances / stats.totalGrievances) * 100) : 0}%
-                      </p>
-                    </div>
+                  <Reveal delay={0.06}>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+                        <p className="text-green-700 font-semibold mb-2">Resolution Rate</p>
+                        <p className="text-4xl font-bold text-green-600">
+                          {stats?.totalGrievances ? Math.round((stats.resolvedGrievances / stats.totalGrievances) * 100) : 0}%
+                        </p>
+                      </div>
 
-                    <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-6 border border-blue-200">
-                      <p className="text-blue-700 font-semibold mb-2">Avg Resolution Time</p>
-                      <p className="text-4xl font-bold text-blue-600">3.2 days</p>
-                    </div>
+                      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-6 border border-blue-200">
+                        <p className="text-blue-700 font-semibold mb-2">Avg Resolution Time</p>
+                        <p className="text-4xl font-bold text-blue-600">3.2 days</p>
+                      </div>
 
-                    <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-200">
-                      <p className="text-orange-700 font-semibold mb-2">Pending Escalation</p>
-                      <p className="text-4xl font-bold text-orange-600">
-                        {stats?.escalatedGrievances || 0}
-                      </p>
+                      <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-200">
+                        <p className="text-orange-700 font-semibold mb-2">Pending Escalation</p>
+                        <p className="text-4xl font-bold text-orange-600">
+                          {stats?.escalatedGrievances || 0}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  </Reveal>
                 </div>
               )}
 
               {activeTab === 'grievances' && (
                 <div className="space-y-6">
                   {/* Filters */}
+                  <Reveal delay={0.03}>
                   <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                     <h3 className="font-bold text-slate-900 mb-4">Filters</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -246,8 +257,10 @@ export default function AdminPage() {
                       </div>
                     </div>
                   </div>
+                  </Reveal>
 
                   {/* Grievances Table */}
+                  <Reveal delay={0.06}>
                   <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full">
@@ -288,42 +301,53 @@ export default function AdminPage() {
                       </table>
                     </div>
                   </div>
+                  </Reveal>
                 </div>
               )}
 
               {activeTab === 'escalations' && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
-                  <p className="text-3xl mb-2">⚠️</p>
-                  <p className="text-slate-600">Escalations management coming soon</p>
-                </div>
+                <Reveal>
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
+                    <p className="text-3xl mb-2">⚠️</p>
+                    <p className="text-slate-600">Escalations management coming soon</p>
+                  </div>
+                </Reveal>
               )}
 
               {activeTab === 'engineers' && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
-                  <p className="text-3xl mb-2">👷</p>
-                  <p className="text-slate-600">Engineers management coming soon</p>
-                </div>
+                <Reveal>
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
+                    <p className="text-3xl mb-2">👷</p>
+                    <p className="text-slate-600">Engineers management coming soon</p>
+                  </div>
+                </Reveal>
               )}
 
               {activeTab === 'analytics' && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
-                  <p className="text-3xl mb-2">📈</p>
-                  <p className="text-slate-600">Analytics dashboard coming soon</p>
-                </div>
+                <Reveal>
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
+                    <p className="text-3xl mb-2">📈</p>
+                    <p className="text-slate-600">Analytics dashboard coming soon</p>
+                  </div>
+                </Reveal>
               )}
 
               {activeTab === 'reports' && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
-                  <p className="text-3xl mb-2">📄</p>
-                  <p className="text-slate-600">Reports generation coming soon</p>
-                </div>
+                <Reveal>
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
+                    <p className="text-3xl mb-2">📄</p>
+                    <p className="text-slate-600">Reports generation coming soon</p>
+                  </div>
+                </Reveal>
               )}
 
               {activeTab === 'settings' && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
-                  <p className="text-3xl mb-2">⚙️</p>
-                  <p className="text-slate-600">Settings management coming soon</p>
-                </div>
+                <Reveal>
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
+                    <p className="text-3xl mb-2">⚙️</p>
+                    <p className="text-slate-600">Settings management coming soon</p>
+                  </div>
+                </Reveal>
               )}
             </>
           )}

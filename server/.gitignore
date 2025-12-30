@@ -9,4 +9,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .vscode/
-.idea/serviceAccountKey.json
+
+# Firebase Admin service account key (never commit)
+serviceAccountKey.json

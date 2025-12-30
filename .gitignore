@@ -10,3 +10,7 @@ yarn-debug.log*
 yarn-error.log*
 .vscode/
 .idea/
+
+# Firebase Admin service account key (never commit)
+server/serviceAccountKey.json
+serviceAccountKey.json

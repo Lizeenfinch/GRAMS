@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
+import Reveal from '../components/Reveal';
+import MotionImage from '../components/MotionImage';
 
 export default function HomePage() {
   const { isAuthenticated } = useAuthStore();
@@ -11,7 +13,7 @@ export default function HomePage() {
       <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-green-50 py-24">
         <div className="max-w-7xl mx-auto px-6 md:px-12 grid lg:grid-cols-2 gap-16 items-center mt-20">
           {/* Left Content */}
-          <div className="space-y-8">
+          <Reveal className="space-y-8">
             {/* Badge */}
             <span className="inline-block bg-green-100 text-green-700 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide border border-green-300">
               ● OFFICIAL PORTAL
@@ -33,8 +35,8 @@ export default function HomePage() {
               <Link to="/register" className="bg-slate-900 text-white px-8 py-3 rounded-lg font-bold hover:bg-slate-800 transition flex items-center gap-2 shadow-lg">
                 <span>→</span> Get Started
               </Link>
-              <Link to="/login" className="bg-white text-slate-700 border-2 border-slate-300 px-8 py-3 rounded-lg font-bold hover:bg-slate-50 hover:border-green-500 transition flex items-center gap-2 shadow-md">
-                🔍 Track Ticket
+              <Link to="/transparency" className="bg-white text-slate-700 border-2 border-slate-300 px-8 py-3 rounded-lg font-bold hover:bg-slate-50 hover:border-green-500 transition flex items-center gap-2 shadow-md">
+                📊 View Transparency
               </Link>
             </div>
 
@@ -53,15 +55,15 @@ export default function HomePage() {
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Villages</p>
               </div>
             </div>
-          </div>
+          </Reveal>
 
           {/* Right Image */}
           <div className="hidden lg:block">
             <div className="rounded-3xl overflow-hidden shadow-2xl border-8 border-white bg-white">
-              <img 
+              <MotionImage 
                 src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&h=500&fit=crop" 
                 alt="GRAMS Dashboard" 
-                className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                className="w-full h-full object-cover"
               />
             </div>
           </div>
@@ -244,7 +246,7 @@ export default function HomePage() {
 
             <div className="relative">
               <div className="bg-gradient-to-br from-green-100 to-blue-100 rounded-3xl p-8 border-2 border-white shadow-2xl">
-                <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&h=400&fit=crop&auto=format" alt="Citizens using GRAMS" className="rounded-2xl shadow-lg mb-6" />
+                <MotionImage src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&h=400&fit=crop&auto=format" alt="Citizens using GRAMS" className="rounded-2xl shadow-lg mb-6" />
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-white p-4 rounded-xl shadow-sm">
                     <p className="text-2xl font-bold text-green-600">92%</p>
@@ -277,36 +279,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-slate-900 text-slate-400 py-10 text-sm">
-        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-8">
-          <div>
-            <h3 className="text-white font-bold text-lg mb-2">GRAMS</h3>
-            <p>Grievance Redressal And Monitoring System</p>
-          </div>
-          <div>
-            <h4 className="text-white font-bold mb-2">Quick Links</h4>
-            <ul className="space-y-1">
-              <li><Link to="/" className="hover:text-white">Home</Link></li>
-              <li><Link to="/login" className="hover:text-white">Login</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-white font-bold mb-2">Legal</h4>
-            <ul className="space-y-1">
-              <li><a href="#" className="hover:text-white">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-white">Terms of Use</a></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-white font-bold mb-2">Support</h4>
-            <ul className="space-y-1">
-              <li>Email: info@grams.gov</li>
-              <li>Phone: +91-7343-212345</li>
-            </ul>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
