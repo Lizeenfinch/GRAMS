@@ -91,12 +91,40 @@ export const getGrievanceById = async (id, token) => {
 export const createGrievance = async (grievanceData, token) => {
   const toastId = toast.loading("Submitting grievance...")
   try {
+    // Create FormData for file upload
+    const formData = new FormData()
+    
+    // Append text fields
+    formData.append('title', grievanceData.title)
+    formData.append('description', grievanceData.description)
+    formData.append('category', grievanceData.category)
+    formData.append('priority', grievanceData.priority || 'medium')
+    
+    if (grievanceData.location) {
+      formData.append('location', grievanceData.location)
+    }
+    
+    // Append photo files
+    if (grievanceData.photos && grievanceData.photos.length > 0) {
+      grievanceData.photos.forEach((photo) => {
+        formData.append('files', photo)
+      })
+    }
+    
+    // Append video files
+    if (grievanceData.videos && grievanceData.videos.length > 0) {
+      grievanceData.videos.forEach((video) => {
+        formData.append('files', video)
+      })
+    }
+    
     const response = await apiconnector(
       "POST",
       CREATE_GRIEVANCE_API,
-      grievanceData,
+      formData,
       {
         Authorization: `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data',
       }
     )
     

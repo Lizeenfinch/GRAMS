@@ -13,7 +13,7 @@ const grievanceSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['academic', 'infrastructure', 'health', 'administrative', 'other'],
+      enum: ['water', 'waste', 'roads', 'electric', 'other'],
       required: true,
     },
     priority: {
@@ -58,8 +58,23 @@ const grievanceSchema = new mongoose.Schema(
     },
     attachments: [
       {
-        type: String,
-        required: false,
+        url: {
+          type: String,
+          required: true,
+        },
+        publicId: {
+          type: String,
+          required: true,
+        },
+        type: {
+          type: String,
+          enum: ['image', 'video'],
+          required: true,
+        },
+        uploadedAt: {
+          type: Date,
+          default: Date.now,
+        },
       },
     ],
     comments: [

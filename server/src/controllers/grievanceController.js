@@ -1,4 +1,5 @@
 const Grievance = require('../models/Grievance');
+const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 
 function safeNumber(value, fallback = 0) {
   const num = Number(value);
@@ -68,13 +69,42 @@ exports.getGrievanceById = async (req, res) => {
 // Create grievance
 exports.createGrievance = async (req, res) => {
   try {
-    const { title, description, category, priority } = req.body;
+    const { title, description, category, priority, location } = req.body;
+    
+    // Handle file uploads
+    const attachments = [];
+    
+    if (req.files && req.files.length > 0) {
+      // Upload each file to Cloudinary
+      for (const file of req.files) {
+        const resourceType = file.mimetype.startsWith('image/') ? 'image' : 'video';
+        
+        try {
+          const uploadResult = await uploadToCloudinary(
+            file.buffer,
+            'grams/grievances',
+            resourceType
+          );
+          
+          attachments.push({
+            url: uploadResult.secure_url,
+            publicId: uploadResult.public_id,
+            type: resourceType,
+          });
+        } catch (uploadError) {
+          console.error('Upload error:', uploadError);
+          // Continue with other files even if one fails
+        }
+      }
+    }
 
     const grievance = new Grievance({
       title,
       description,
-      category,
-      priority,
+      category: category.toLowerCase(),
+      priority: priority || 'medium',
+      location,
+      attachments,
       userId: req.user.id,
     });
 
@@ -86,6 +116,7 @@ exports.createGrievance = async (req, res) => {
       data: grievance,
     });
   } catch (error) {
+    console.error('Create grievance error:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -136,11 +167,25 @@ exports.updateGrievance = async (req, res) => {
 // Delete grievance
 exports.deleteGrievance = async (req, res) => {
   try {
-    const grievance = await Grievance.findByIdAndDelete(req.params.id);
+    const grievance = await Grievance.findById(req.params.id);
 
     if (!grievance) {
       return res.status(404).json({ message: 'Grievance not found' });
     }
+
+    // Delete all attachments from Cloudinary
+    if (grievance.attachments && grievance.attachments.length > 0) {
+      for (const attachment of grievance.attachments) {
+        try {
+          await deleteFromCloudinary(attachment.publicId, attachment.type);
+        } catch (deleteError) {
+          console.error('Failed to delete attachment:', deleteError);
+          // Continue deletion even if some attachments fail
+        }
+      }
+    }
+
+    await Grievance.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       success: true,

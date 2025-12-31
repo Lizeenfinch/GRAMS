@@ -314,17 +314,29 @@ export default function GrievanceFormPage() {
       return;
     }
 
+    // Validate "Other" category
+    if (formData.category === 'other' && !formData.otherCategory) {
+      setError('Please specify the category when selecting "Other"');
+      return;
+    }
+
     try {
       setLoading(true);
       setError('');
       const token = localStorage.getItem('token');
-      const grievance = await createGrievance({
+      
+      // Prepare grievance data with files
+      const grievanceData = {
         title: formData.description.substring(0, 50),
         description: formData.description,
-        category: formData.category,
+        category: formData.category === 'other' ? formData.otherCategory : formData.category,
         priority: 'medium',
         location: formData.location?.lat ? `${formData.location.lat}, ${formData.location.lon}` : formData.address,
-      }, token);
+        photos: formData.photos,
+        videos: formData.videos,
+      };
+      
+      const grievance = await createGrievance(grievanceData, token);
       
       setSuccess(`Complaint submitted successfully! Your Ticket ID: ${grievance?._id?.slice(-6) || 'PENDING'}`);
       setTimeout(() => {
