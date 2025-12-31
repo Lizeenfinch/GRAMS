@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { grievanceAPI } from '../api/axios';
 import Reveal from '../components/Reveal';
 import MotionImage from '../components/MotionImage';
+import { createGrievance } from '../Services/operations/grievanceAPI';
 
 export default function GrievanceFormPage() {
   const navigate = useNavigate();
@@ -14,8 +14,11 @@ export default function GrievanceFormPage() {
     email: '',
     address: '',
     category: '',
+    otherCategory: '',
     description: '',
     location: null,
+    photos: [],
+    videos: [],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -23,6 +26,8 @@ export default function GrievanceFormPage() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [interimText, setInterimText] = useState('');
+  const [photoPreviews, setPhotoPreviews] = useState([]);
+  const [videoPreviews, setVideoPreviews] = useState([]);
   const recognitionRef = useRef(null);
   const keepListeningRef = useRef(false);
   const silenceTimerRef = useRef(null);
@@ -46,7 +51,7 @@ export default function GrievanceFormPage() {
     const { id, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [id === 'userName' ? 'name' : id === 'userPhone' ? 'phone' : id === 'userEmail' ? 'email' : id === 'userAddress' ? 'address' : id === 'descArea' ? 'description' : id]: value
+      [id === 'userName' ? 'name' : id === 'userPhone' ? 'phone' : id === 'userEmail' ? 'email' : id === 'userAddress' ? 'address' : id === 'descArea' ? 'description' : id === 'otherCategory' ? 'otherCategory' : id]: value
     }));
   };
 
@@ -78,6 +83,71 @@ export default function GrievanceFormPage() {
         setError(`Unable to fetch location: ${err.message}`);
       }
     );
+  };
+
+  const handlePhotoUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const validPhotos = files.filter(file => file.type.startsWith('image/'));
+    
+    if (validPhotos.length + formData.photos.length > 5) {
+      setError('You can upload maximum 5 photos');
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      photos: [...prev.photos, ...validPhotos]
+    }));
+
+    // Create previews
+    const newPreviews = validPhotos.map(file => URL.createObjectURL(file));
+    setPhotoPreviews(prev => [...prev, ...newPreviews]);
+    setError('');
+  };
+
+  const handleVideoUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const validVideos = files.filter(file => file.type.startsWith('video/'));
+    
+    if (validVideos.length + formData.videos.length > 2) {
+      setError('You can upload maximum 2 videos');
+      return;
+    }
+
+    // Check video size (max 50MB per video)
+    const oversized = validVideos.filter(file => file.size > 50 * 1024 * 1024);
+    if (oversized.length > 0) {
+      setError('Video files must be less than 50MB each');
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      videos: [...prev.videos, ...validVideos]
+    }));
+
+    // Create previews
+    const newPreviews = validVideos.map(file => URL.createObjectURL(file));
+    setVideoPreviews(prev => [...prev, ...newPreviews]);
+    setError('');
+  };
+
+  const removePhoto = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index)
+    }));
+    URL.revokeObjectURL(photoPreviews[index]);
+    setPhotoPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeVideo = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      videos: prev.videos.filter((_, i) => i !== index)
+    }));
+    URL.revokeObjectURL(videoPreviews[index]);
+    setVideoPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const startVoiceInput = () => {
@@ -247,20 +317,21 @@ export default function GrievanceFormPage() {
     try {
       setLoading(true);
       setError('');
-      const response = await grievanceAPI.createGrievance({
+      const token = localStorage.getItem('token');
+      const grievance = await createGrievance({
         title: formData.description.substring(0, 50),
         description: formData.description,
         category: formData.category,
         priority: 'medium',
         location: formData.location?.lat ? `${formData.location.lat}, ${formData.location.lon}` : formData.address,
-      });
+      }, token);
       
-      setSuccess(`Complaint submitted successfully! Your Ticket ID: ${response.data?.data?._id?.slice(-6) || 'PENDING'}`);
+      setSuccess(`Complaint submitted successfully! Your Ticket ID: ${grievance?._id?.slice(-6) || 'PENDING'}`);
       setTimeout(() => {
         navigate('/dashboard');
       }, 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit complaint. Please try again.');
+      setError('Failed to submit complaint. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -271,6 +342,7 @@ export default function GrievanceFormPage() {
     { name: 'Waste', icon: '🗑️', color: 'green' },
     { name: 'Roads', icon: '🛣️', color: 'slate' },
     { name: 'Electric', icon: '⚡', color: 'yellow' },
+    { name: 'Other', icon: '📋', color: 'gray' },
   ];
 
   return (
@@ -386,90 +458,22 @@ export default function GrievanceFormPage() {
                   </div>
                 </Reveal>
 
-                {/* SECTION 2: LOCATION */}
+                {/* SECTION 2: CATEGORY */}
                 <Reveal delay={0.1}>
-                  <div className="mb-8 pb-8 border-b-2 border-dashed border-yellow-100">
-                    <div className="flex items-center gap-2 mb-6">
-                      <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                        <span className="text-lg">📍</span>
-                      </div>
-                      <h3 className="text-lg font-bold text-slate-800">2. Location Details</h3>
-                    </div>
-
-                    {/* Live Location Button */}
-                    <div className="mb-4">
-                      <button 
-                        type="button" 
-                        onClick={shareLocation}
-                        className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-6 py-4 rounded-xl font-bold shadow-lg hover:from-orange-600 hover:to-yellow-600 transition flex items-center justify-center gap-2"
-                      >
-                        <span className="text-xl">📍</span>
-                        Share Live Location
-                      </button>
-                      <p className="text-xs text-slate-500 mt-2 ml-1">Click to auto-detect your current location</p>
-                    </div>
-
-                    {/* Location Display */}
-                    {formData.location && (
-                      <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-4">
-                        <div className="flex items-start gap-3 mb-4">
-                          <span className="text-2xl">✅</span>
-                          <div className="flex-1">
-                            <p className="text-xs font-bold text-green-700 uppercase">Location Captured</p>
-                            <p className="text-sm text-green-900 mt-1 font-medium">Your location has been captured successfully!</p>
-                            <p className="text-xs text-green-600 mt-1 font-mono">Lat: {formData.location.lat}, Lon: {formData.location.lon}</p>
-                          </div>
-                        </div>
-                        
-                        {/* Map Display */}
-                        <div className="mt-4 rounded-lg overflow-hidden border-2 border-green-300 h-64 shadow-md">
-                          <iframe
-                            width="100%"
-                            height="100%"
-                            frameBorder="0"
-                            style={{ border: 0 }}
-                            src={`https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(formData.location.lon)-0.01},${parseFloat(formData.location.lat)-0.01},${parseFloat(formData.location.lon)+0.01},${parseFloat(formData.location.lat)+0.01}&layer=mapnik&marker=${formData.location.lat},${formData.location.lon}`}
-                            allowFullScreen=""
-                            loading="lazy"
-                          ></iframe>
-                        </div>
-                        
-                        <p className="text-xs text-green-600 mt-3">📍 Click on the map to open in full view. Verify the location before submitting.</p>
-                      </div>
-                    )}
-
-                    {/* Manual Address */}
-                    <div>
-                      <label htmlFor="address" className="block text-xs font-bold text-slate-500 uppercase mb-2">Address / Landmark *</label>
-                      <input 
-                        type="text" 
-                        id="userAddress"
-                        value={formData.address}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-green-500 transition font-medium" 
-                        placeholder="Near Govt School, Sector 4, Main Road" 
-                        required 
-                      />
-                    </div>
-                  </div>
-                </Reveal>
-
-                {/* SECTION 3: CATEGORY */}
-                <Reveal delay={0.15}>
                   <div className="mb-8 pb-8 border-b-2 border-dashed border-orange-100">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
                           <span className="text-lg">🏷️</span>
                         </div>
-                        <h3 className="text-lg font-bold text-slate-800">3. Select Category *</h3>
+                        <h3 className="text-lg font-bold text-slate-800">2. Select Category *</h3>
                       </div>
                       {selectedCategory && (
                         <span className="text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full">{selectedCategory}</span>
                       )}
                     </div>
                     
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                       {categoryOptions.map((cat) => (
                         <div 
                           key={cat.name}
@@ -485,18 +489,131 @@ export default function GrievanceFormPage() {
                         </div>
                       ))}
                     </div>
+
+                    {/* Other Category Input */}
+                    {selectedCategory === 'Other' && (
+                      <div className="mt-4">
+                        <label htmlFor="otherCategory" className="block text-xs font-bold text-slate-500 uppercase mb-2">Specify Category *</label>
+                        <input 
+                          type="text" 
+                          id="otherCategory"
+                          value={formData.otherCategory}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-green-500 transition font-medium" 
+                          placeholder="Enter custom category (e.g., Street Lights, Parks, etc.)" 
+                          required 
+                        />
+                      </div>
+                    )}
                   </div>
                 </Reveal>
 
-                {/* SECTION 4: DESCRIPTION */}
+                {/* SECTION 3: PHOTO & VIDEO UPLOAD */}
+                <Reveal delay={0.15}>
+                  <div className="mb-8 pb-8 border-b-2 border-dashed border-purple-100">
+                    <div className="flex items-center gap-2 mb-6">
+                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <span className="text-lg">📸</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-800">3. Add Photos & Videos</h3>
+                      <span className="text-xs text-slate-500">(Optional)</span>
+                    </div>
+
+                    {/* Photo Upload */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-bold text-slate-700 mb-3">
+                        📷 Upload Photos (Max 5)
+                      </label>
+                      <div className="flex flex-wrap gap-4">
+                        {photoPreviews.map((preview, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={preview}
+                              alt={`Preview ${index + 1}`}
+                              className="w-32 h-32 object-cover rounded-xl border-2 border-slate-200"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removePhoto(index)}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                        
+                        {formData.photos.length < 5 && (
+                          <label className="w-32 h-32 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-green-500 hover:bg-green-50 transition-all duration-300">
+                            <span className="text-3xl mb-2">📷</span>
+                            <span className="text-xs text-slate-600 font-medium">Add Photo</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={handlePhotoUpload}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-2">
+                        Supported: JPG, PNG, GIF • Max 5 photos
+                      </p>
+                    </div>
+
+                    {/* Video Upload */}
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-3">
+                        🎥 Upload Videos (Max 2, 50MB each)
+                      </label>
+                      <div className="flex flex-wrap gap-4">
+                        {videoPreviews.map((preview, index) => (
+                          <div key={index} className="relative group">
+                            <video
+                              src={preview}
+                              className="w-32 h-32 object-cover rounded-xl border-2 border-slate-200"
+                              controls
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeVideo(index)}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                        
+                        {formData.videos.length < 2 && (
+                          <label className="w-32 h-32 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-green-500 hover:bg-green-50 transition-all duration-300">
+                            <span className="text-3xl mb-2">🎥</span>
+                            <span className="text-xs text-slate-600 font-medium">Add Video</span>
+                            <input
+                              type="file"
+                              accept="video/*"
+                              multiple
+                              onChange={handleVideoUpload}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-2">
+                        Supported: MP4, MOV, AVI • Max 2 videos, 50MB each
+                      </p>
+                    </div>
+                  </div>
+                </Reveal>
+
+                {/* SECTION 4: VOICE NOTE / DESCRIPTION */}
                 <Reveal delay={0.2}>
                   <div className="mb-8 pb-8 border-b-2 border-dashed border-green-100">
                     <div className="flex justify-between items-center mb-4">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                          <span className="text-lg">📝</span>
+                          <span className="text-lg">🎙️</span>
                         </div>
-                        <h3 className="text-lg font-bold text-slate-800">4. Describe Issue *</h3>
+                        <h3 className="text-lg font-bold text-slate-800">4. Voice Note / Describe Issue *</h3>
                       </div>
                     </div>
                     
@@ -508,7 +625,7 @@ export default function GrievanceFormPage() {
                           value={isListening && interimText ? ((formData.description ? formData.description + ' ' : '') + interimText) : formData.description}
                           onChange={handleInputChange}
                           className="w-full h-40 p-5 pr-16 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none resize-none transition" 
-                          placeholder="Describe the problem, location, and details (minimum 20 characters)..." 
+                          placeholder="Describe the problem, location, and details (minimum 20 characters) or use voice note..." 
                           minLength={20}
                           required
                         ></textarea>
@@ -635,8 +752,76 @@ export default function GrievanceFormPage() {
                   </div>
                 </Reveal>
 
-                {/* SECTION 5: HELP INFO */}
+                {/* SECTION 5: LOCATION */}
                 <Reveal delay={0.25}>
+                  <div className="mb-8 pb-8 border-b-2 border-dashed border-yellow-100">
+                    <div className="flex items-center gap-2 mb-6">
+                      <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                        <span className="text-lg">📍</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-800">5. Location Details</h3>
+                    </div>
+
+                    {/* Live Location Button */}
+                    <div className="mb-4">
+                      <button 
+                        type="button" 
+                        onClick={shareLocation}
+                        className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-6 py-4 rounded-xl font-bold shadow-lg hover:from-orange-600 hover:to-yellow-600 transition flex items-center justify-center gap-2"
+                      >
+                        <span className="text-xl">📍</span>
+                        Share Live Location
+                      </button>
+                      <p className="text-xs text-slate-500 mt-2 ml-1">Click to auto-detect your current location</p>
+                    </div>
+
+                    {/* Location Display */}
+                    {formData.location && (
+                      <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-4">
+                        <div className="flex items-start gap-3 mb-4">
+                          <span className="text-2xl">✅</span>
+                          <div className="flex-1">
+                            <p className="text-xs font-bold text-green-700 uppercase">Location Captured</p>
+                            <p className="text-sm text-green-900 mt-1 font-medium">Your location has been captured successfully!</p>
+                            <p className="text-xs text-green-600 mt-1 font-mono">Lat: {formData.location.lat}, Lon: {formData.location.lon}</p>
+                          </div>
+                        </div>
+                        
+                        {/* Map Display */}
+                        <div className="mt-4 rounded-lg overflow-hidden border-2 border-green-300 h-64 shadow-md">
+                          <iframe
+                            width="100%"
+                            height="100%"
+                            frameBorder="0"
+                            style={{ border: 0 }}
+                            src={`https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(formData.location.lon)-0.01},${parseFloat(formData.location.lat)-0.01},${parseFloat(formData.location.lon)+0.01},${parseFloat(formData.location.lat)+0.01}&layer=mapnik&marker=${formData.location.lat},${formData.location.lon}`}
+                            allowFullScreen=""
+                            loading="lazy"
+                          ></iframe>
+                        </div>
+                        
+                        <p className="text-xs text-green-600 mt-3">📍 Click on the map to open in full view. Verify the location before submitting.</p>
+                      </div>
+                    )}
+
+                    {/* Manual Address */}
+                    <div>
+                      <label htmlFor="address" className="block text-xs font-bold text-slate-500 uppercase mb-2">Address / Landmark *</label>
+                      <input 
+                        type="text" 
+                        id="userAddress"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-green-500 transition font-medium" 
+                        placeholder="Near Govt School, Sector 4, Main Road" 
+                        required 
+                      />
+                    </div>
+                  </div>
+                </Reveal>
+
+                {/* SECTION 6: HELP INFO */}
+                <Reveal delay={0.3}>
                   <div className="bg-gradient-to-r from-slate-50 to-green-50 rounded-2xl p-6 border-2 border-green-100 mb-8">
                     <div className="flex items-start gap-4">
                       <div className="text-2xl">ℹ️</div>
@@ -649,7 +834,7 @@ export default function GrievanceFormPage() {
                 </Reveal>
 
                 {/* Submit Buttons */}
-                <Reveal delay={0.3}>
+                <Reveal delay={0.35}>
                   <div className="flex gap-4">
                     <button 
                       type="button" 

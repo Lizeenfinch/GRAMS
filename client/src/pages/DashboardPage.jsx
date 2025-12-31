@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { grievanceAPI } from '../api/axios';
 import useAuthStore from '../store/authStore';
 import Reveal from '../components/Reveal';
+import { getUserGrievances, createGrievance } from '../Services/operations/grievanceAPI';
 
 export default function DashboardPage() {
   const [grievances, setGrievances] = useState([]);
@@ -24,11 +24,11 @@ export default function DashboardPage() {
   const fetchGrievances = async () => {
     try {
       setLoading(true);
-      const response = await grievanceAPI.getUserGrievances();
-      setGrievances(response.data.data);
+      const token = localStorage.getItem('token');
+      const data = await getUserGrievances(token);
+      setGrievances(data);
       
       // Calculate stats
-      const data = response.data.data;
       setStats({
         open: data.filter(g => g.status === 'open').length,
         inProgress: data.filter(g => g.status === 'in-progress').length,
@@ -48,7 +48,8 @@ export default function DashboardPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await grievanceAPI.createGrievance(formData);
+      const token = localStorage.getItem('token');
+      await createGrievance(formData, token);
       setFormData({ title: '', description: '', category: 'water', priority: 'medium' });
       setShowModal(false);
       fetchGrievances();

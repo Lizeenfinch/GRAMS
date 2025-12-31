@@ -88,11 +88,20 @@ exports.assignGrievance = async (req, res) => {
   try {
     const { grievanceId, userId } = req.body;
 
-    const grievance = await Grievance.findByIdAndUpdate(
-      grievanceId,
-      { assignedTo: userId, status: 'in-progress' },
-      { new: true }
-    );
+    const grievance = await Grievance.findById(grievanceId);
+    if (!grievance) {
+      return res.status(404).json({ message: 'Grievance not found' });
+    }
+
+    const now = new Date();
+    grievance.assignedTo = userId;
+    grievance.status = 'in-progress';
+    grievance.assignedAt = now;
+    if (!grievance.firstAssignedAt) {
+      grievance.firstAssignedAt = now;
+    }
+
+    await grievance.save();
 
     res.status(200).json({
       success: true,

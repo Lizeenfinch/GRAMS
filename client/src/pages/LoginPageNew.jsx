@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from '../api/axios';
 import useAuthStore from '../store/authStore';
 import { signInWithGoogle } from '../config/firebaseConfig';
 import Reveal from '../components/Reveal';
 import MotionImage from '../components/MotionImage';
+import { sendOTP, verifyOTP, googleLogin } from '../Services/operations/authAPI';
+import { toast } from 'react-hot-toast';
 
 export default function LoginPageNew() {
   const [activeTab, setActiveTab] = useState('citizen');
@@ -55,19 +56,17 @@ export default function LoginPageNew() {
 
       const fullPhone = '+91' + phoneDigits;
 
-      const response = await axios.post('/auth/send-otp', {
-        phone: fullPhone
-      });
+      const response = await sendOTP(fullPhone);
       
-      if (response.data.success) {
-        setGeneratedOtp(response.data.demoOTP);
+      if (response?.success) {
+        setGeneratedOtp(response.demoOTP);
         setOtpSent(true);
         console.log(`✅ OTP sent to ${fullPhone}`);
       } else {
-        setError(response.data.message || 'Failed to send OTP');
+        setError('Failed to send OTP');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to send OTP. Please try again.');
+      setError('Failed to send OTP. Please try again.');
       console.error('Send OTP error:', err);
     } finally {
       setLoading(false);
@@ -95,22 +94,15 @@ export default function LoginPageNew() {
       const phoneDigits = formData.citizenPhone.replace(/[^0-9]/g, '');
       const fullPhone = '+91' + phoneDigits;
 
-      const response = await axios.post('/auth/verify-otp', {
-        phone: fullPhone,
-        otp: otp
-      });
+      const response = await verifyOTP(fullPhone, otp, navigate);
 
-      if (response.data.success) {
-        localStorage.setItem('token', response.data.token);
-        setToken(response.data.token);
-        setUser(response.data.user);
+      if (response) {
+        setToken(response.token);
+        setUser(response.user);
         console.log('✅ OTP verified successfully');
-        navigate('/dashboard');
-      } else {
-        setError(response.data.message || 'OTP verification failed');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'OTP verification failed. Please try again.');
+      setError('OTP verification failed. Please try again.');
       console.error('Verify OTP error:', err);
     } finally {
       setLoading(false);
@@ -153,17 +145,14 @@ export default function LoginPageNew() {
         const googleResult = await signInWithGoogle();
         
         // Send ID token to backend for verification and JWT generation
-        const response = await axios.post('/auth/google-login', {
+        const response = await googleLogin({
           idToken: googleResult.idToken,
-        });
+        }, navigate);
 
-        if (response.data.success) {
+        if (response) {
           // Store token and user data
-          setToken(response.data.token);
-          setUser(response.data.user);
-          
-          // Redirect to dashboard
-          setTimeout(() => navigate('/dashboard'), 500);
+          setToken(response.token);
+          setUser(response.user);
         }
       } else if (provider === 'Microsoft') {
         setError('Microsoft login coming soon');
@@ -176,8 +165,6 @@ export default function LoginPageNew() {
       
       if (error.message) {
         errorMessage = error.message;
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
       }
       
       setError(errorMessage);

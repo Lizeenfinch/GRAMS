@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { adminAPI } from '../api/axios';
 import useAuthStore from '../store/authStore';
 import GramsLogo from '../components/GramsLogo';
 import Reveal from '../components/Reveal';
+import { getDashboardStats, getAllGrievancesAdmin } from '../Services/operations/adminAPI';
 
 export default function AdminPage() {
   const [stats, setStats] = useState(null);
@@ -21,12 +21,13 @@ export default function AdminPage() {
   const fetchDashboard = async () => {
     try {
       setLoading(true);
-      const [statsRes, grievancesRes] = await Promise.all([
-        adminAPI.getDashboardStats(),
-        adminAPI.getAllGrievances(filters),
+      const token = localStorage.getItem('token');
+      const [statsData, grievancesData] = await Promise.all([
+        getDashboardStats(token),
+        getAllGrievancesAdmin(token, filters),
       ]);
-      setStats(statsRes.data.data);
-      setGrievances(grievancesRes.data.data);
+      setStats(statsData);
+      setGrievances(grievancesData);
     } catch (err) {
       setError('Failed to fetch admin data');
     } finally {

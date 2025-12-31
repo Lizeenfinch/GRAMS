@@ -8,6 +8,11 @@ const authRoutes = require('./routes/authRoutes');
 const phoneAuthRoutes = require('./routes/phoneAuthRoutes');
 const grievanceRoutes = require('./routes/grievanceRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const transparencyRoutes = require('./routes/transparencyRoutes');
+const budgetRoutes = require('./routes/budgetRoutes');
+
+// Import services
+const { autoEscalateGrievances, updateDaysOpen } = require('./utils/escalationService');
 
 // Initialize Firebase Admin (if configured)
 try {
@@ -23,7 +28,9 @@ const app = express();
 connectDB();
 
 // Middleware
-app.use(cors());
+app.use(cors(
+  origin=true
+));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -37,6 +44,30 @@ app.use('/api/auth', authRoutes);
 app.use('/api/phone-auth', phoneAuthRoutes);
 app.use('/api/grievances', grievanceRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/transparency', transparencyRoutes);
+app.use('/api/budget', budgetRoutes);
+
+// Auto-escalation scheduler - runs every hour
+setInterval(async () => {
+  try {
+    console.log('🔄 Running auto-escalation check...');
+    await updateDaysOpen();
+    await autoEscalateGrievances();
+  } catch (error) {
+    console.error('❌ Auto-escalation failed:', error);
+  }
+}, 60 * 60 * 1000); // Every 1 hour
+
+// Run once on startup
+setTimeout(async () => {
+  try {
+    console.log('🚀 Running initial escalation check...');
+    await updateDaysOpen();
+    await autoEscalateGrievances();
+  } catch (error) {
+    console.error('❌ Initial escalation check failed:', error);
+  }
+}, 5000); // 5 seconds after startup
 
 // 404 handler
 app.use((req, res) => {

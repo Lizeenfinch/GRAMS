@@ -1,8 +1,176 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Reveal from '../components/Reveal';
+import { getTransparencyReport, upvoteIssue } from '../Services/operations/transparencyAPI';
 
 export default function TransparencyPage() {
+  const [loading, setLoading] = React.useState(true);
+  const [report, setReport] = React.useState(null);
+  const [upvoting, setUpvoting] = React.useState({});
+
+  React.useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const data = await getTransparencyReport();
+      setReport(data || null);
+    } catch (err) {
+      console.error('Failed to fetch transparency data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpvote = async (issueId) => {
+    if (upvoting[issueId]) return;
+    
+    setUpvoting((prev) => ({ ...prev, [issueId]: true }));
+    try {
+      const token = localStorage.getItem('token');
+      const data = await upvoteIssue(issueId, token);
+      if (data) {
+        setReport((prev) => ({
+          ...prev,
+          overdueIssues: prev.overdueIssues.map((issue) =>
+            issue._id === issueId
+              ? { ...issue, upvotes: data.upvotes, priority: data.priority }
+              : issue
+          ),
+        }));
+      }
+    } catch (e) {
+      console.error('Failed to upvote:', e);
+    } finally {
+      setUpvoting((prev) => ({ ...prev, [issueId]: false }));
+    }
+  };
+
+  const totals = report?.totals || {};
+  const satisfaction = report?.satisfaction || { avg: 0, count: 0 };
+  const performance = report?.performance || {};
+  const overdueIssues = report?.overdueIssues || [];
+  const budget = report?.budget || { totalBudgetUsed: 0, breakdown: [] };
+
+  const resolutionRate = Number.isFinite(totals.resolutionRate) ? totals.resolutionRate : 0;
+  const resolvedCount = Number.isFinite(totals.resolvedCount) ? totals.resolvedCount : 0;
+  const pendingCount = Number.isFinite(totals.pendingCount) ? totals.pendingCount : 0;
+
+  const circleRadius = 84;
+  const circumference = 2 * Math.PI * circleRadius;
+  const clampedRate = Math.max(0, Math.min(100, resolutionRate));
+  const dashOffset = circumference * (1 - clampedRate / 100);
+
+  const categoryStats = React.useMemo(() => {
+    const ui = {
+      infrastructure: {
+        name: 'Infrastructure',
+        emoji: '🏗️',
+        iconBgClass: 'bg-orange-100',
+        barFromClass: 'from-orange-400',
+        barToClass: 'to-orange-600',
+      },
+      health: {
+        name: 'Health',
+        emoji: '🏥',
+        iconBgClass: 'bg-red-100',
+        barFromClass: 'from-red-400',
+        barToClass: 'to-red-600',
+      },
+      academic: {
+        name: 'Academic',
+        emoji: '📚',
+        iconBgClass: 'bg-blue-100',
+        barFromClass: 'from-blue-400',
+        barToClass: 'to-blue-600',
+      },
+      administrative: {
+        name: 'Administrative',
+        emoji: '📋',
+        iconBgClass: 'bg-purple-100',
+        barFromClass: 'from-purple-400',
+        barToClass: 'to-purple-600',
+      },
+      other: {
+        name: 'Other',
+        emoji: '🔧',
+        iconBgClass: 'bg-slate-200',
+        barFromClass: 'from-slate-400',
+        barToClass: 'to-slate-600',
+      },
+    };
+
+    const items = report?.charts?.categoryBreakdown || [];
+    return items
+      .map((c) => {
+        const meta = ui[c.key] || ui.other;
+        return {
+          key: c.key,
+          name: meta.name,
+          count: c.count || 0,
+          percentage: c.percentage || 0,
+          emoji: meta.emoji,
+          iconBgClass: meta.iconBgClass,
+          barFromClass: meta.barFromClass,
+          barToClass: meta.barToClass,
+        };
+      })
+      .slice(0, 5);
+  }, [report]);
+
+  const budgetCards = React.useMemo(() => {
+    const ui = {
+      water: {
+        title: 'Water Infrastructure',
+        emoji: '💧',
+        cardClass: 'bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200',
+        amountClass: 'text-blue-600',
+        borderClass: 'border-blue-200',
+      },
+      roads: {
+        title: 'Road Maintenance',
+        emoji: '🛣️',
+        cardClass: 'bg-gradient-to-br from-slate-50 to-slate-100 border-slate-300',
+        amountClass: 'text-slate-700',
+        borderClass: 'border-slate-300',
+      },
+      electricity: {
+        title: 'Electricity & Others',
+        emoji: '⚡',
+        cardClass: 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200',
+        amountClass: 'text-yellow-600',
+        borderClass: 'border-yellow-200',
+      },
+      other: {
+        title: 'Other',
+        emoji: '🧾',
+        cardClass: 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200',
+        amountClass: 'text-green-700',
+        borderClass: 'border-green-200',
+      },
+    };
+
+    const breakdown = budget?.breakdown || [];
+    return breakdown
+      .map((b) => {
+        const meta = ui[b.key] || ui.other;
+        return {
+          key: b.key,
+          title: meta.title,
+          emoji: meta.emoji,
+          amount: b.amount || 0,
+          percentage: b.percentage || 0,
+          items: b.items || 0,
+          cardClass: meta.cardClass,
+          amountClass: meta.amountClass,
+          borderClass: meta.borderClass,
+        };
+      })
+      .slice(0, 3);
+  }, [budget]);
+
   return (
     <section id="impact" className="page-enter bg-slate-50 min-h-screen">
       {/* Hero */}
@@ -40,7 +208,7 @@ export default function TransparencyPage() {
                 <span className="text-lg">💰</span>
               </div>
             </div>
-            <p className="text-4xl font-extrabold text-slate-900 mb-2">₹4.2L</p>
+            <p className="text-4xl font-extrabold text-slate-900 mb-2">₹{(Number(totals.totalBudgetUsed || 0) / 100000).toFixed(1)}L</p>
             <div className="flex items-center gap-1">
               <span className="text-green-600">📈</span>
               <p className="text-xs text-green-600 font-semibold">↑ 12% from last month</p>
@@ -57,7 +225,7 @@ export default function TransparencyPage() {
                 <span className="text-lg">⏱️</span>
               </div>
             </div>
-            <p className="text-4xl font-extrabold text-green-600 mb-2">3.5 Days</p>
+            <p className="text-4xl font-extrabold text-green-600 mb-2">{Number(totals.avgResolutionDays || 0).toFixed(1)} Days</p>
             <div className="flex items-center gap-1">
               <span className="text-green-600">✅</span>
               <p className="text-xs text-green-600 font-semibold">↓ 0.8 days faster</p>
@@ -74,7 +242,7 @@ export default function TransparencyPage() {
                 <span className="text-lg">👨‍💼</span>
               </div>
             </div>
-            <p className="text-4xl font-extrabold text-slate-900 mb-2">24</p>
+            <p className="text-4xl font-extrabold text-slate-900 mb-2">{totals.activeOfficersCount || 0}</p>
             <div className="flex items-center gap-1">
               <span className="text-slate-600">📍</span>
               <p className="text-xs text-slate-600 font-semibold">Across 12 wards</p>
@@ -91,7 +259,7 @@ export default function TransparencyPage() {
                 <span className="text-lg">⭐</span>
               </div>
             </div>
-            <p className="text-4xl font-extrabold text-purple-600 mb-2">4.8/5</p>
+            <p className="text-4xl font-extrabold text-purple-600 mb-2">{(satisfaction.avg || 0) > 0 ? `${satisfaction.avg}/5` : '0/5'}</p>
             <div className="flex items-center gap-1">
               <span className="text-purple-600">📊</span>
               <p className="text-xs text-purple-600 font-semibold">+0.3 from last quarter</p>
@@ -116,85 +284,26 @@ export default function TransparencyPage() {
             </div>
 
             <div className="space-y-6">
-              {/* Water */}
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span>💧</span>
+              {categoryStats.map((cat) => (
+                <div key={cat.key}>
+                  <div className="flex justify-between items-center mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 ${cat.iconBgClass} rounded-full flex items-center justify-center`}>
+                        <span>{cat.emoji}</span>
+                      </div>
+                      <span className="text-slate-700 font-semibold">{cat.name}</span>
                     </div>
-                    <span className="text-slate-700 font-semibold">Water</span>
+                    <span className="text-slate-900 font-bold">{cat.percentage}%</span>
                   </div>
-                  <span className="text-slate-900 font-bold">40%</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-blue-400 to-blue-600 h-3 rounded-full"
-                    style={{ width: '40%' }}
-                  />
-                </div>
-                <p className="text-xs text-slate-500 mt-2">245 complaints</p>
-              </div>
-
-              {/* Roads */}
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
-                      <span>🛣️</span>
-                    </div>
-                    <span className="text-slate-700 font-semibold">Roads</span>
+                  <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                    <div
+                      className={`bg-gradient-to-r ${cat.barFromClass} ${cat.barToClass} h-3 rounded-full`}
+                      style={{ width: `${cat.percentage}%` }}
+                    />
                   </div>
-                  <span className="text-slate-900 font-bold">35%</span>
+                  <p className="text-xs text-slate-500 mt-2">{cat.count} complaints</p>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-slate-600 to-slate-800 h-3 rounded-full"
-                    style={{ width: '35%' }}
-                  />
-                </div>
-                <p className="text-xs text-slate-500 mt-2">215 complaints</p>
-              </div>
-
-              {/* Electricity */}
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                      <span>💡</span>
-                    </div>
-                    <span className="text-slate-700 font-semibold">Electricity</span>
-                  </div>
-                  <span className="text-slate-900 font-bold">15%</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-yellow-300 to-yellow-500 h-3 rounded-full"
-                    style={{ width: '15%' }}
-                  />
-                </div>
-                <p className="text-xs text-slate-500 mt-2">92 complaints</p>
-              </div>
-
-              {/* Waste */}
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                      <span>🗑️</span>
-                    </div>
-                    <span className="text-slate-700 font-semibold">Waste</span>
-                  </div>
-                  <span className="text-slate-900 font-bold">10%</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-red-400 to-red-600 h-3 rounded-full"
-                    style={{ width: '10%' }}
-                  />
-                </div>
-                <p className="text-xs text-slate-500 mt-2">61 complaints</p>
-              </div>
+              ))}
             </div>
           </div>
           </Reveal>
@@ -222,24 +331,24 @@ export default function TransparencyPage() {
                   stroke="#22c55e"
                   strokeWidth="14"
                   fill="none"
-                  strokeDasharray="527.79"
-                  strokeDashoffset="63.34"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={dashOffset}
                   strokeLinecap="round"
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-5xl font-extrabold text-green-600">88%</span>
+                <span className="text-5xl font-extrabold text-green-600">{clampedRate}%</span>
               </div>
             </div>
             <h4 className="font-bold text-2xl text-slate-900 mb-2">Resolution Rate</h4>
             <p className="text-sm text-slate-600 mb-8">Highest in District</p>
             <div className="grid grid-cols-2 gap-4 w-full">
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-2xl border border-green-200">
-                <p className="text-3xl font-bold text-green-700">540</p>
+                <p className="text-3xl font-bold text-green-700">{resolvedCount}</p>
                 <p className="text-xs text-slate-700 font-semibold mt-1">✅ Resolved</p>
               </div>
               <div className="bg-gradient-to-br from-orange-50 to-red-50 p-4 rounded-2xl border border-orange-200">
-                <p className="text-3xl font-bold text-orange-600">74</p>
+                <p className="text-3xl font-bold text-orange-600">{pendingCount}</p>
                 <p className="text-xs text-slate-700 font-semibold mt-1">⏳ Pending</p>
               </div>
             </div>
@@ -276,69 +385,58 @@ export default function TransparencyPage() {
           </Reveal>
 
           <div className="grid lg:grid-cols-2 gap-8">
-            {/* Escalated Issue 1 */}
-            <Reveal delay={0.02}>
-            <div className="bg-white p-8 rounded-2xl shadow-lg border-2 border-red-200 hover:shadow-xl hover:border-red-400 transition duration-300">
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center text-2xl">
-                    🚨
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-lg text-slate-900">
-                      Pipeline Burst on Main Road
-                    </h4>
-                    <p className="text-sm text-slate-500 mt-2">📍 Ward 4 • 9 days ago</p>
-                  </div>
-                </div>
-                <span className="bg-red-100 text-red-700 px-4 py-2 rounded-full text-xs font-bold">
-                  🔴 OVERDUE
-                </span>
-              </div>
-              <p className="text-slate-700 mb-6 leading-relaxed">
-                Major water pipeline burst causing waterlogging and traffic disruption on the main
-                road near market area.
-              </p>
-              <div className="flex items-center justify-between border-t pt-6">
-                <button className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 px-4 py-2 rounded-full transition font-bold text-sm border border-red-200">
-                  <span className="text-lg">👍</span>
-                  <span>127 Upvotes</span>
-                </button>
-                <p className="text-xs text-slate-500 font-semibold">👤 Rajesh Sharma</p>
-              </div>
-            </div>
-            </Reveal>
+            {overdueIssues.map((issue, idx) => {
+              const isCritical = issue.priority === 'critical' || issue.daysOpen >= 14;
+              const badgeClass = isCritical
+                ? 'bg-red-100 text-red-700 border-red-300'
+                : 'bg-orange-100 text-orange-700 border-orange-300';
+              const borderClass = isCritical
+                ? 'border-red-200 hover:border-red-400'
+                : 'border-orange-200 hover:border-orange-400';
+              const iconBg = isCritical ? 'bg-red-100' : 'bg-orange-100';
+              const icon = isCritical ? '🚨' : '⏳';
+              const badgeText = isCritical ? '🔴 OVERDUE' : '🟠 DELAYED';
 
-            {/* Escalated Issue 2 */}
-            <Reveal delay={0.06}>
-            <div className="bg-white p-8 rounded-2xl shadow-lg border-2 border-orange-200 hover:shadow-xl hover:border-orange-400 transition duration-300">
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 bg-orange-100 rounded-xl flex items-center justify-center text-2xl">
-                    💡
+              return (
+                <Reveal key={issue._id} delay={0.02 + idx * 0.04}>
+                  <div className={`bg-white p-8 rounded-2xl shadow-lg border-2 ${borderClass} hover:shadow-xl transition duration-300`}>
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex items-start gap-4">
+                        <div className={`w-14 h-14 ${iconBg} rounded-xl flex items-center justify-center text-2xl`}>
+                          {icon}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-lg text-slate-900">{issue.title}</h4>
+                          <p className="text-sm text-slate-500 mt-2">📍 {issue.daysOpen} days ago</p>
+                        </div>
+                      </div>
+                      <span className={`px-4 py-2 rounded-full text-xs font-bold border ${badgeClass}`}>{badgeText}</span>
+                    </div>
+                    <p className="text-slate-700 mb-6 leading-relaxed">{issue.description}</p>
+                    <div className="flex items-center justify-between border-t pt-6">
+                      <button 
+                        onClick={() => handleUpvote(issue._id)}
+                        disabled={upvoting[issue._id]}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full transition font-bold text-sm border ${
+                          upvoting[issue._id]
+                            ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                            : 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200'
+                        }`}
+                      >
+                        <span className="text-lg">👍</span>
+                        <span>{issue.upvotes || 0} Upvotes</span>
+                      </button>
+                      <p className="text-xs text-slate-500 font-semibold">👤 {issue.user?.name || 'Anonymous'}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-lg text-slate-900">Streetlight Not Working</h4>
-                    <p className="text-sm text-slate-500 mt-2">📍 Ward 9 • 8 days ago</p>
-                  </div>
-                </div>
-                <span className="bg-orange-100 text-orange-700 px-4 py-2 rounded-full text-xs font-bold">
-                  🟠 DELAYED
-                </span>
+                </Reveal>
+              );
+            })}
+            {!loading && overdueIssues.length === 0 && (
+              <div className="lg:col-span-2 bg-white p-10 rounded-2xl border border-slate-200 text-center text-slate-700">
+                No issues are currently beyond 7 days.
               </div>
-              <p className="text-slate-700 mb-6 leading-relaxed">
-                Multiple streetlights not working on the main lane. Residents concerned about safety
-                during night hours.
-              </p>
-              <div className="flex items-center justify-between border-t pt-6">
-                <button className="flex items-center gap-2 bg-orange-50 hover:bg-orange-100 text-orange-700 px-4 py-2 rounded-full transition font-bold text-sm border border-orange-200">
-                  <span className="text-lg">👍</span>
-                  <span>89 Upvotes</span>
-                </button>
-                <p className="text-xs text-slate-500 font-semibold">👤 Meena Verma</p>
-              </div>
-            </div>
-            </Reveal>
+            )}
           </div>
 
           <Reveal delay={0.1}>
@@ -372,59 +470,28 @@ export default function TransparencyPage() {
         </Reveal>
 
         <div className="grid md:grid-cols-3 gap-8">
-          {/* Water Infrastructure */}
-          <Reveal delay={0.02}>
-          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-8 rounded-2xl border-2 border-blue-200 hover:shadow-lg transition duration-300">
-            <div className="flex items-center justify-between mb-5">
-              <h4 className="font-bold text-lg text-slate-900">Water Infrastructure</h4>
-              <span className="text-3xl">💧</span>
+          {budgetCards.map((b, idx) => (
+            <Reveal key={b.key} delay={0.02 + idx * 0.04}>
+              <div className={`p-8 rounded-2xl border-2 hover:shadow-lg transition duration-300 ${b.cardClass}`}>
+                <div className="flex items-center justify-between mb-5">
+                  <h4 className="font-bold text-lg text-slate-900">{b.title}</h4>
+                  <span className="text-3xl">{b.emoji}</span>
+                </div>
+                <p className={`text-4xl font-extrabold mb-2 ${b.amountClass}`}>₹{(Number(b.amount) / 100000).toFixed(1)}L</p>
+                <p className="text-sm text-slate-700 font-semibold">{b.percentage}% of total budget</p>
+                <div className={`mt-6 pt-6 border-t ${b.borderClass}`}>
+                  <p className="text-sm text-slate-700">
+                    <strong className={b.amountClass}>{b.items}</strong> tracked expenses
+                  </p>
+                </div>
+              </div>
+            </Reveal>
+          ))}
+          {!loading && budgetCards.length === 0 && (
+            <div className="md:col-span-3 bg-white p-10 rounded-2xl border border-slate-200 text-center text-slate-700">
+              No budget entries have been recorded yet.
             </div>
-            <p className="text-4xl font-extrabold text-blue-600 mb-2">₹1.8L</p>
-            <p className="text-sm text-slate-700 font-semibold">42% of total budget</p>
-            <div className="mt-6 pt-6 border-t border-blue-200">
-              <p className="text-sm text-slate-700">
-                <strong className="text-blue-600">127</strong> pipe repairs,{' '}
-                <strong className="text-blue-600">18</strong> valve replacements
-              </p>
-            </div>
-          </div>
-          </Reveal>
-
-          {/* Road Maintenance */}
-          <Reveal delay={0.06}>
-          <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-8 rounded-2xl border-2 border-slate-300 hover:shadow-lg transition duration-300">
-            <div className="flex items-center justify-between mb-5">
-              <h4 className="font-bold text-lg text-slate-900">Road Maintenance</h4>
-              <span className="text-3xl">🛣️</span>
-            </div>
-            <p className="text-4xl font-extrabold text-slate-700 mb-2">₹1.5L</p>
-            <p className="text-sm text-slate-700 font-semibold">36% of total budget</p>
-            <div className="mt-6 pt-6 border-t border-slate-300">
-              <p className="text-sm text-slate-700">
-                <strong className="text-slate-700">89</strong> potholes filled,{' '}
-                <strong className="text-slate-700">12</strong> road repairs
-              </p>
-            </div>
-          </div>
-          </Reveal>
-
-          {/* Electricity & Others */}
-          <Reveal delay={0.1}>
-          <div className="bg-gradient-to-br from-yellow-50 to-amber-50 p-8 rounded-2xl border-2 border-yellow-200 hover:shadow-lg transition duration-300">
-            <div className="flex items-center justify-between mb-5">
-              <h4 className="font-bold text-lg text-slate-900">Electricity & Others</h4>
-              <span className="text-3xl">⚡</span>
-            </div>
-            <p className="text-4xl font-extrabold text-yellow-600 mb-2">₹0.9L</p>
-            <p className="text-sm text-slate-700 font-semibold">22% of total budget</p>
-            <div className="mt-6 pt-6 border-t border-yellow-200">
-              <p className="text-sm text-slate-700">
-                <strong className="text-yellow-600">54</strong> streetlights fixed,{' '}
-                <strong className="text-yellow-600">23</strong> misc
-              </p>
-            </div>
-          </div>
-          </Reveal>
+          )}
         </div>
       </div>
 
@@ -455,7 +522,7 @@ export default function TransparencyPage() {
               <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
                 📋
               </div>
-              <p className="text-4xl font-extrabold text-green-600 mb-2">92%</p>
+              <p className="text-4xl font-extrabold text-green-600 mb-2">{performance.slaComplianceRate ?? 0}%</p>
               <p className="font-bold text-slate-900 mb-1">SLA Compliance</p>
               <p className="text-sm text-slate-700">Resolved within 7 days</p>
             </div>
@@ -467,7 +534,7 @@ export default function TransparencyPage() {
               <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
                 ⏱️
               </div>
-              <p className="text-4xl font-extrabold text-blue-600 mb-2">1.2h</p>
+              <p className="text-4xl font-extrabold text-blue-600 mb-2">{performance.firstResponseHoursAvg ?? 0}h</p>
               <p className="font-bold text-slate-900 mb-1">First Response</p>
               <p className="text-sm text-slate-700">Avg time to assignment</p>
             </div>
@@ -479,7 +546,7 @@ export default function TransparencyPage() {
               <div className="w-16 h-16 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
                 🔄
               </div>
-              <p className="text-4xl font-extrabold text-orange-600 mb-2">7</p>
+              <p className="text-4xl font-extrabold text-orange-600 mb-2">{performance.repeatIssuesCount ?? 0}</p>
               <p className="font-bold text-slate-900 mb-1">Repeat Issues</p>
               <p className="text-sm text-slate-700">Re-opened complaints</p>
             </div>
@@ -491,9 +558,11 @@ export default function TransparencyPage() {
               <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
                 ⭐
               </div>
-              <p className="text-4xl font-extrabold text-purple-600 mb-2">4.8/5</p>
+              <p className="text-4xl font-extrabold text-purple-600 mb-2">
+                {(satisfaction.avg || 0) > 0 ? `${satisfaction.avg}/5` : '0/5'}
+              </p>
               <p className="font-bold text-slate-900 mb-1">Citizen Rating</p>
-              <p className="text-sm text-slate-700">Based on 342 feedbacks</p>
+              <p className="text-sm text-slate-700">Based on {satisfaction.count || 0} feedbacks</p>
             </div>
             </Reveal>
           </div>

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from '../api/axios';
 import useAuthStore from '../store/authStore';
 import Reveal from '../components/Reveal';
+import { register } from '../Services/operations/authAPI';
 
 export default function RegisterPageNew() {
   const [formData, setFormData] = useState({
@@ -66,20 +66,16 @@ export default function RegisterPageNew() {
     setLoading(true);
 
     try {
-      const response = await axios.post('/auth/register', {
+      await register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
         phone: formData.phone,
         role: 'user'
-      });
+      }, navigate);
 
-      if (response.data.success) {
-        setToken(response.data.token);
-        setUser(response.data.user);
-        setSuccess('Registration successful! Redirecting...');
-        setTimeout(() => navigate('/dashboard'), 1500);
-      }
+      setSuccess('Registration successful! Redirecting...');
+      setTimeout(() => navigate('/dashboard'), 1500);
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
       console.error('Registration error:', err);

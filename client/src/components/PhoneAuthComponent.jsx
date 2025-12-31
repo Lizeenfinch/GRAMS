@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import useAuthStore from '../store/authStore';
 import { setupRecaptcha, sendPhoneOTP, verifyPhoneOTP } from '../config/firebaseConfig';
+import { apiconnector } from '../Services/apiconnector';
+import { phoneAuthEndpoints } from '../Services/apis';
+import { toast } from 'react-hot-toast';
 
 const PhoneAuthComponent = () => {
   const navigate = useNavigate();
@@ -97,8 +99,9 @@ const PhoneAuthComponent = () => {
       const idToken = await firebaseUser.getIdToken();
 
       // Send to backend to create/update user
-      const response = await axios.post(
-        'http://localhost:5000/api/phone-auth/phone-register',
+      const response = await apiconnector(
+        'POST',
+        phoneAuthEndpoints.SEND_PHONE_OTP_API.replace('/send-otp', '/phone-register'),
         {
           name: userDetails.name,
           email: userDetails.email,
@@ -108,9 +111,12 @@ const PhoneAuthComponent = () => {
       );
 
       // Save auth token and user info
-      setToken(response.data.token);
-      setUser(response.data.user);
-      setMessage('Account created successfully!');
+      if (response.data?.success) {
+        setToken(response.data.token);
+        setUser(response.data.user);
+        setMessage('Account created successfully!');
+        toast.success('Account created successfully!');
+      }
 
       // Redirect to dashboard
       setTimeout(() => {

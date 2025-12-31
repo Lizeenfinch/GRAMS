@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const {
   getAllGrievances,
+  getTransparencyReport,
   getUserGrievances,
   getGrievanceById,
   createGrievance,
@@ -13,6 +14,7 @@ const {
 
 router.get('/', auth, getUserGrievances);
 router.get('/all', getAllGrievances);
+router.get('/transparency', getTransparencyReport);
 router.get('/:id', auth, getGrievanceById);
 router.post('/', auth, createGrievance);
 router.put('/:id', auth, updateGrievance);

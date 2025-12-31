@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
+import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import PrivateRoute from './components/PrivateRoute';
 import PageTransition from './components/PageTransition';
@@ -14,6 +15,11 @@ import AdminPage from './pages/AdminPage';
 import TransparencyPage from './pages/TransparencyPage';
 import OverdueIssuesPage from './pages/OverdueIssuesPage';
 import GrievanceFormPage from './pages/GrievanceFormPage';
+import CommunityPage from './pages/CommunityPage.jsx';
+import BudgetTransparencyPage from './pages/BudgetTransparencyPage';
+import TrackPage from './pages/TrackPage';
+import PerformancePage from './pages/PerformancePage';
+import StatusPage from './pages/StatusPage';
 import './index.css';
 
 function AnimatedRoutes() {
@@ -47,10 +53,50 @@ function AnimatedRoutes() {
           }
         />
         <Route
+          path="/transparency/budget"
+          element={
+            <PageTransition>
+              <BudgetTransparencyPage />
+            </PageTransition>
+          }
+        />
+        <Route
           path="/file-grievance"
           element={
             <PageTransition>
               <GrievanceFormPage />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/community"
+          element={
+            <PageTransition>
+              <CommunityPage />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/track"
+          element={
+            <PageTransition>
+              <TrackPage />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/performance"
+          element={
+            <PageTransition>
+              <PerformancePage />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/status"
+          element={
+            <PageTransition>
+              <StatusPage />
             </PageTransition>
           }
         />
@@ -104,6 +150,31 @@ export default function App() {
       <Navbar />
       <AnimatedRoutes />
       <Footer />
+      <Toaster
+        position="top-center"
+        reverseOrder={false}
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#333',
+            color: '#fff',
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#22c55e',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
     </Router>
   );
 }

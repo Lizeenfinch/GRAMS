@@ -23,8 +23,20 @@ const grievanceSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['open', 'in-progress', 'resolved', 'closed', 'rejected'],
+      enum: ['open', 'in-progress', 'resolved', 'closed', 'rejected', 'blocked'],
       default: 'open',
+    },
+    isEscalated: {
+      type: Boolean,
+      default: false,
+    },
+    escalatedAt: {
+      type: Date,
+      required: false,
+    },
+    daysOpen: {
+      type: Number,
+      default: 0,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -34,6 +46,14 @@ const grievanceSchema = new mongoose.Schema(
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+      required: false,
+    },
+    firstAssignedAt: {
+      type: Date,
+      required: false,
+    },
+    assignedAt: {
+      type: Date,
       required: false,
     },
     attachments: [
@@ -52,12 +72,61 @@ const grievanceSchema = new mongoose.Schema(
         },
       },
     ],
+    upvotes: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    reopenedCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     resolution: {
       type: String,
       required: false,
     },
     resolutionDate: {
       type: Date,
+      required: false,
+    },
+    citizenRating: {
+      type: Number,
+      required: false,
+      min: 1,
+      max: 5,
+    },
+    budget: {
+      allocated: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+      spent: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+      category: {
+        type: String,
+        enum: ['water', 'roads', 'electricity', 'waste', 'other'],
+        required: false,
+      },
+      description: {
+        type: String,
+        required: false,
+      },
+      expenseDetails: [{
+        item: String,
+        cost: Number,
+        date: {
+          type: Date,
+          default: Date.now,
+        },
+      }],
+    },
+    location: {
+      type: String,
       required: false,
     },
   },

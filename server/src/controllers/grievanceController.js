@@ -1,5 +1,14 @@
 const Grievance = require('../models/Grievance');
 
+function safeNumber(value, fallback = 0) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
+function toDays(ms) {
+  return Math.floor(ms / (1000 * 60 * 60 * 24));
+}
+
 // Get all grievances
 exports.getAllGrievances = async (req, res) => {
   try {
@@ -90,10 +99,30 @@ exports.updateGrievance = async (req, res) => {
       return res.status(404).json({ message: 'Grievance not found' });
     }
 
-    grievance = await Grievance.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const prevStatus = grievance.status;
+    const prevAssignedTo = grievance.assignedTo ? String(grievance.assignedTo) : null;
+
+    Object.assign(grievance, req.body);
+
+    const nextStatus = grievance.status;
+    if (['resolved', 'closed'].includes(prevStatus) && ['open', 'in-progress'].includes(nextStatus)) {
+      grievance.reopenedCount = safeNumber(grievance.reopenedCount, 0) + 1;
+    }
+
+    if (nextStatus === 'resolved' && !grievance.resolutionDate) {
+      grievance.resolutionDate = new Date();
+    }
+
+    const nextAssignedTo = grievance.assignedTo ? String(grievance.assignedTo) : null;
+    if (nextAssignedTo && nextAssignedTo !== prevAssignedTo) {
+      const now = new Date();
+      grievance.assignedAt = now;
+      if (!grievance.firstAssignedAt) {
+        grievance.firstAssignedAt = now;
+      }
+    }
+
+    await grievance.save({ validateModifiedOnly: true });
 
     res.status(200).json({
       success: true,
@@ -143,6 +172,153 @@ exports.addComment = async (req, res) => {
     res.status(200).json({
       success: true,
       data: grievance,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Public transparency report stats
+exports.getTransparencyReport = async (req, res) => {
+  try {
+    const grievances = await Grievance.find()
+      .populate('userId', 'name email')
+      .populate('assignedTo', 'name email')
+      .sort({ createdAt: -1 });
+
+    const totalGrievances = grievances.length;
+    const resolvedGrievances = grievances.filter((g) => g.status === 'resolved');
+    const resolvedCount = resolvedGrievances.length;
+    const pendingCount = grievances.filter((g) => ['open', 'in-progress'].includes(g.status)).length;
+    const resolutionRate = totalGrievances > 0 ? Math.round((resolvedCount / totalGrievances) * 100) : 0;
+
+    const resolutionDays = resolvedGrievances
+      .map((g) => {
+        const created = new Date(g.createdAt);
+        const resolvedAt = new Date(g.resolutionDate || g.updatedAt);
+        return toDays(resolvedAt - created);
+      })
+      .filter((d) => Number.isFinite(d) && d >= 0);
+
+    const avgResolutionDays = resolutionDays.length
+      ? resolutionDays.reduce((sum, d) => sum + d, 0) / resolutionDays.length
+      : 0;
+
+    const slaCompliant = resolutionDays.filter((d) => d <= 7).length;
+    const slaComplianceRate = resolutionDays.length ? Math.round((slaCompliant / resolutionDays.length) * 100) : 0;
+
+    const activeOfficersCount = new Set(
+      grievances.filter((g) => g.assignedTo).map((g) => String(g.assignedTo._id || g.assignedTo))
+    ).size;
+
+    const ratingValues = grievances
+      .map((g) => safeNumber(g.citizenRating, null))
+      .filter((r) => r !== null && r >= 1 && r <= 5);
+    const satisfactionAvg = ratingValues.length
+      ? Math.round((ratingValues.reduce((sum, r) => sum + r, 0) / ratingValues.length) * 10) / 10
+      : 0;
+
+    const now = Date.now();
+    const overdueIssues = grievances
+      .filter((g) => !['resolved', 'closed', 'rejected'].includes(g.status))
+      .map((g) => {
+        const daysOpen = toDays(now - new Date(g.createdAt).getTime());
+        const upvotes = Number.isFinite(g.upvotes) ? g.upvotes : (g.comments?.length || 0);
+        return {
+          _id: g._id,
+          title: g.title,
+          description: g.description,
+          category: g.category,
+          priority: g.priority,
+          status: g.status,
+          createdAt: g.createdAt,
+          user: g.userId ? { name: g.userId.name, email: g.userId.email } : null,
+          assignedTo: g.assignedTo ? { name: g.assignedTo.name, email: g.assignedTo.email } : null,
+          upvotes,
+          daysOpen,
+        };
+      })
+      .filter((g) => g.daysOpen > 7)
+      .sort((a, b) => b.daysOpen - a.daysOpen)
+      .slice(0, 6);
+
+    const categoryKeys = ['infrastructure', 'health', 'academic', 'administrative', 'other'];
+    const categoryCounts = categoryKeys.reduce((acc, key) => {
+      acc[key] = grievances.filter((g) => g.category === key).length;
+      return acc;
+    }, {});
+
+    const categoryBreakdown = categoryKeys.map((key) => {
+      const count = categoryCounts[key] || 0;
+      const percentage = totalGrievances > 0 ? Math.round((count / totalGrievances) * 100) : 0;
+      return { key, count, percentage };
+    });
+
+    const budgetKeys = ['water', 'roads', 'electricity', 'other'];
+    const budgetTotals = budgetKeys.reduce(
+      (acc, key) => {
+        acc[key] = { amount: 0, items: 0 };
+        return acc;
+      },
+      {}
+    );
+
+    for (const g of grievances) {
+      const category = g.budget?.category;
+      const amount = safeNumber(g.budget?.amount, 0);
+      if (!category || !budgetTotals[category] || amount <= 0) continue;
+      budgetTotals[category].amount += amount;
+      budgetTotals[category].items += 1;
+    }
+
+    const totalBudgetUsed = Object.values(budgetTotals).reduce((sum, v) => sum + safeNumber(v.amount, 0), 0);
+    const budgetBreakdown = budgetKeys.map((key) => {
+      const amount = safeNumber(budgetTotals[key].amount, 0);
+      const percentage = totalBudgetUsed > 0 ? Math.round((amount / totalBudgetUsed) * 100) : 0;
+      return { key, amount, percentage, items: budgetTotals[key].items };
+    });
+
+    const assignmentDiffHours = grievances
+      .filter((g) => g.firstAssignedAt)
+      .map((g) => (new Date(g.firstAssignedAt) - new Date(g.createdAt)) / (1000 * 60 * 60))
+      .filter((h) => Number.isFinite(h) && h >= 0);
+
+    const firstResponseHoursAvg = assignmentDiffHours.length
+      ? Math.round((assignmentDiffHours.reduce((sum, h) => sum + h, 0) / assignmentDiffHours.length) * 10) / 10
+      : 0;
+
+    const repeatIssuesCount = grievances.reduce((sum, g) => sum + safeNumber(g.reopenedCount, 0), 0);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totals: {
+          totalGrievances,
+          resolvedCount,
+          pendingCount,
+          resolutionRate,
+          avgResolutionDays: Math.round(avgResolutionDays * 10) / 10,
+          activeOfficersCount,
+          totalBudgetUsed,
+        },
+        satisfaction: {
+          avg: satisfactionAvg,
+          count: ratingValues.length,
+        },
+        charts: {
+          categoryBreakdown,
+        },
+        overdueIssues,
+        budget: {
+          totalBudgetUsed,
+          breakdown: budgetBreakdown,
+        },
+        performance: {
+          slaComplianceRate,
+          firstResponseHoursAvg,
+          repeatIssuesCount,
+        },
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
