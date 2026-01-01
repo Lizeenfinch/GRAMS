@@ -86,6 +86,7 @@ exports.getTransparencyReport = async (req, res) => {
           user: g.userId ? { name: g.userId.name, email: g.userId.email } : null,
           assignedTo: g.assignedTo ? { name: g.assignedTo.name, email: g.assignedTo.email } : null,
           upvotes,
+          upvotedBy: g.upvotedBy || [],
           daysOpen,
         };
       })
@@ -283,6 +284,7 @@ exports.getOverdueIssues = async (req, res) => {
           user: g.userId ? { name: g.userId.name, email: g.userId.email } : null,
           assignedTo: g.assignedTo ? { name: g.assignedTo.name, email: g.assignedTo.email } : null,
           upvotes: safeNumber(g.upvotes, 0),
+          upvotedBy: g.upvotedBy || [],
           daysOpen,
           commentsCount: g.comments?.length || 0,
         };
@@ -329,11 +331,12 @@ exports.getOverdueIssues = async (req, res) => {
 /**
  * @desc    Upvote an overdue issue (public can upvote)
  * @route   POST /api/transparency/upvote/:id
- * @access  Public
+ * @access  Public (but tracks user if logged in)
  */
 exports.upvoteIssue = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user?.id || req.body?.userId; // Get user ID from auth or body
 
     const grievance = await Grievance.findById(id);
     if (!grievance) {
@@ -361,6 +364,28 @@ exports.upvoteIssue = async (req, res) => {
         success: false,
         message: 'Cannot upvote resolved, closed, or rejected issues',
       });
+    }
+
+    // Check if user has already upvoted (if userId is provided)
+    if (userId) {
+      if (!grievance.upvotedBy) {
+        grievance.upvotedBy = [];
+      }
+      
+      const hasAlreadyUpvoted = grievance.upvotedBy.some(
+        (voterId) => voterId.toString() === userId.toString()
+      );
+
+      if (hasAlreadyUpvoted) {
+        return res.status(400).json({
+          success: false,
+          message: 'You have already upvoted this issue',
+          alreadyUpvoted: true,
+        });
+      }
+
+      // Add user to upvotedBy array
+      grievance.upvotedBy.push(userId);
     }
 
     // Increment upvote count

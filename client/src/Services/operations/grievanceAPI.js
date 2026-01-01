@@ -10,6 +10,7 @@ const {
   UPDATE_GRIEVANCE_API,
   DELETE_GRIEVANCE_API,
   ADD_COMMENT_API,
+  UPVOTE_GRIEVANCE_API,
 } = grievanceEndpoints
 
 // Get All Grievances (Public)
@@ -232,5 +233,32 @@ export const addComment = async (id, commentData, token) => {
     throw error
   } finally {
     toast.dismiss(toastId)
+  }
+}
+
+// Upvote a Grievance
+export const upvoteGrievance = async (id, token) => {
+  try {
+    const response = await apiconnector(
+      "POST",
+      `${UPVOTE_GRIEVANCE_API}/${id}/upvote`,
+      null,
+      {
+        Authorization: `Bearer ${token}`,
+      }
+    )
+    
+    console.log("UPVOTE GRIEVANCE API RESPONSE............", response)
+
+    if (!response.data.success) {
+      throw new Error(response.data.message)
+    }
+
+    // Don't show toast here - handled by component with custom animation
+    return response.data.data
+  } catch (error) {
+    console.log("UPVOTE GRIEVANCE API ERROR............", error)
+    // Don't show toast here - handled by component
+    throw error
   }
 }

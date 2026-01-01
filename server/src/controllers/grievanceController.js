@@ -223,6 +223,86 @@ exports.addComment = async (req, res) => {
   }
 };
 
+// Upvote a grievance (any user can upvote any issue once)
+exports.upvoteGrievance = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'You must be logged in to upvote',
+      });
+    }
+
+    const grievance = await Grievance.findById(id);
+    if (!grievance) {
+      return res.status(404).json({
+        success: false,
+        message: 'Grievance not found',
+      });
+    }
+
+    if (['resolved', 'closed', 'rejected'].includes(grievance.status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot upvote resolved, closed, or rejected issues',
+      });
+    }
+
+    // Initialize upvotedBy if it doesn't exist
+    if (!grievance.upvotedBy) {
+      grievance.upvotedBy = [];
+    }
+
+    // Check if user has already upvoted
+    const hasAlreadyUpvoted = grievance.upvotedBy.some(
+      (voterId) => voterId.toString() === userId.toString()
+    );
+
+    if (hasAlreadyUpvoted) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have already upvoted this issue',
+        alreadyUpvoted: true,
+      });
+    }
+
+    // Add user to upvotedBy array and increment count
+    grievance.upvotedBy.push(userId);
+    grievance.upvotes = safeNumber(grievance.upvotes, 0) + 1;
+    await grievance.save();
+
+    // Auto-escalation based on upvotes
+    if (grievance.upvotes >= 50 && grievance.priority !== 'critical') {
+      grievance.priority = 'critical';
+      await grievance.save();
+    } else if (grievance.upvotes >= 25 && !['high', 'critical'].includes(grievance.priority)) {
+      grievance.priority = 'high';
+      await grievance.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        _id: grievance._id,
+        upvotes: grievance.upvotes,
+        priority: grievance.priority,
+        upvotedBy: grievance.upvotedBy,
+      },
+      message: 'Upvote recorded successfully',
+    });
+  } catch (error) {
+    console.error('Upvote Grievance Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upvote issue',
+      error: error.message,
+    });
+  }
+};
+
 // Public transparency report stats
 exports.getTransparencyReport = async (req, res) => {
   try {

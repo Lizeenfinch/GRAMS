@@ -92,6 +92,10 @@ const grievanceSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    upvotedBy: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    }],
     reopenedCount: {
       type: Number,
       default: 0,

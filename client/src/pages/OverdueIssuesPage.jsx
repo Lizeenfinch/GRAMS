@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 import Reveal from '../components/Reveal';
 import { getOverdueIssues, upvoteIssue } from '../Services/operations/transparencyAPI';
+import useAuthStore from '../store/authStore';
 
 function formatDate(dateString) {
   const date = new Date(dateString);
@@ -9,6 +12,7 @@ function formatDate(dateString) {
 }
 
 export default function OverdueIssuesPage() {
+  const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [issues, setIssues] = useState([]);
@@ -56,6 +60,25 @@ export default function OverdueIssuesPage() {
   const handleUpvote = async (issueId) => {
     if (upvoting[issueId]) return;
     
+    // Check if user is logged in
+    if (!user) {
+      toast.error('Please login to upvote issues', {
+        position: 'bottom-right',
+        style: { background: '#1e293b', color: '#fff', borderRadius: '12px' },
+      });
+      return;
+    }
+
+    // Check if user already upvoted this issue
+    const issue = issues.find(i => i._id === issueId);
+    if (issue?.upvotedBy?.some(id => id === user._id || id === user.id)) {
+      toast.error('You have already upvoted this issue', {
+        position: 'bottom-right',
+        style: { background: '#1e293b', color: '#fff', borderRadius: '12px' },
+      });
+      return;
+    }
+    
     setUpvoting((prev) => ({ ...prev, [issueId]: true }));
     try {
       const token = localStorage.getItem('token');
@@ -64,10 +87,14 @@ export default function OverdueIssuesPage() {
         setIssues((prev) =>
           prev.map((issue) =>
             issue._id === issueId
-              ? { ...issue, upvotes: data.upvotes, priority: data.priority }
+              ? { ...issue, upvotes: data.upvotes, priority: data.priority, upvotedBy: [...(issue.upvotedBy || []), user._id || user.id] }
               : issue
           )
         );
+        toast.success('Upvote recorded! 🎉', {
+          position: 'bottom-right',
+          style: { background: '#059669', color: '#fff', borderRadius: '12px' },
+        });
       }
     } catch (e) {
       console.error('Failed to upvote:', e);
@@ -216,6 +243,7 @@ export default function OverdueIssuesPage() {
                   high: 'bg-orange-50 text-orange-700 border-orange-200',
                   critical: 'bg-red-50 text-red-700 border-red-200',
                 };
+                const hasUpvoted = user && g.upvotedBy?.some(id => id === user._id || id === user.id);
 
                 return (
                   <Reveal key={g._id}>
@@ -243,18 +271,36 @@ export default function OverdueIssuesPage() {
                           </div>
 
                           <div className="flex items-center gap-4">
-                            <button
+                            <motion.button
                               onClick={(e) => { e.preventDefault(); handleUpvote(g._id); }}
-                              disabled={upvoting[g._id]}
-                              className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm border transition ${
-                                upvoting[g._id]
-                                  ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                                  : 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200'
-                              }`}
+                              disabled={upvoting[g._id] || hasUpvoted}
+                              title={hasUpvoted ? 'You already upvoted this issue' : 'Upvote this issue'}
+                              whileHover={!hasUpvoted && !upvoting[g._id] ? { scale: 1.05 } : {}}
+                              whileTap={!hasUpvoted && !upvoting[g._id] ? { scale: 0.95 } : {}}
+                              animate={{
+                                backgroundColor: hasUpvoted ? '#dcfce7' : '#fef2f2',
+                                borderColor: hasUpvoted ? '#86efac' : '#fecaca',
+                                color: hasUpvoted ? '#15803d' : '#b91c1c',
+                              }}
+                              transition={{ duration: 0.3, ease: 'easeInOut' }}
+                              className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm border-2 ${upvoting[g._id] ? 'cursor-not-allowed opacity-70' : hasUpvoted ? 'cursor-default' : 'cursor-pointer'}`}
                             >
-                              <span className="text-lg">👍</span>
-                              <span>{g.upvotes || 0}</span>
-                            </button>
+                              <motion.span
+                                className="text-lg"
+                                animate={{ rotate: hasUpvoted ? [0, -10, 10, 0] : 0, scale: hasUpvoted ? [1, 1.2, 1] : 1 }}
+                                transition={{ duration: 0.4 }}
+                              >
+                                {upvoting[g._id] ? '⏳' : hasUpvoted ? '✓' : '👍'}
+                              </motion.span>
+                              <motion.span
+                                key={g.upvotes}
+                                initial={{ y: -10, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                transition={{ duration: 0.3 }}
+                              >
+                                {g.upvotes || 0}
+                              </motion.span>
+                            </motion.button>
                             <div className="text-slate-700 font-extrabold text-lg select-none">
                               <span className="group-open:hidden">▾</span>
                               <span className="hidden group-open:inline">▴</span>

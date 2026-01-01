@@ -20,6 +20,7 @@ export const grievanceEndpoints = {
   UPDATE_GRIEVANCE_API: BASE_URL + "/grievances", // append /:id
   DELETE_GRIEVANCE_API: BASE_URL + "/grievances", // append /:id
   ADD_COMMENT_API: BASE_URL + "/grievances", // append /:id/comment
+  UPVOTE_GRIEVANCE_API: BASE_URL + "/grievances", // append /:id/upvote
 }
 
 // TRANSPARENCY ENDPOINTS

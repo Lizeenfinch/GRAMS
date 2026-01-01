@@ -11,6 +11,7 @@ const {
   updateGrievance,
   deleteGrievance,
   addComment,
+  upvoteGrievance,
 } = require('../controllers/grievanceController');
 
 router.get('/', auth, getUserGrievances);
@@ -21,5 +22,6 @@ router.post('/', auth, upload.array('files', 7), createGrievance);
 router.put('/:id', auth, updateGrievance);
 router.delete('/:id', auth, deleteGrievance);
 router.post('/:id/comment', auth, addComment);
+router.post('/:id/upvote', auth, upvoteGrievance);
 
 module.exports = router;

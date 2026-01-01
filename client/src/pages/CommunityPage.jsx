@@ -1,12 +1,16 @@
 import React from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { getAllGrievances } from '../Services/operations/grievanceAPI';
+import { toast } from 'react-hot-toast';
+import { getAllGrievances, upvoteGrievance } from '../Services/operations/grievanceAPI';
+import useAuthStore from '../store/authStore';
 
 export default function CommunityPage() {
+  const { user } = useAuthStore();
   const [activeFilter, setActiveFilter] = React.useState('all');
   const [grievances, setGrievances] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
+  const [upvoting, setUpvoting] = React.useState({});
   const shouldReduceMotion = useReducedMotion();
 
   React.useEffect(() => {
@@ -24,6 +28,52 @@ export default function CommunityPage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpvote = async (issueId) => {
+    if (upvoting[issueId]) return;
+    
+    // Check if user is logged in
+    if (!user) {
+      toast.error('Please login to upvote issues', {
+        position: 'bottom-right',
+        style: { background: '#1e293b', color: '#fff', borderRadius: '12px' },
+      });
+      return;
+    }
+
+    // Check if user already upvoted this issue
+    const grievance = grievances.find(g => g._id === issueId);
+    if (grievance?.upvotedBy?.some(id => id === user._id || id === user.id)) {
+      toast.error('You have already upvoted this issue', {
+        position: 'bottom-right',
+        style: { background: '#1e293b', color: '#fff', borderRadius: '12px' },
+      });
+      return;
+    }
+    
+    setUpvoting((prev) => ({ ...prev, [issueId]: true }));
+    try {
+      const token = localStorage.getItem('token');
+      const data = await upvoteGrievance(issueId, token);
+      if (data) {
+        setGrievances((prev) =>
+          prev.map((g) =>
+            g._id === issueId
+              ? { ...g, upvotes: data.upvotes, priority: data.priority, upvotedBy: data.upvotedBy || [...(g.upvotedBy || []), user._id || user.id] }
+              : g
+          )
+        );
+        toast.success('Upvote recorded! 🎉', {
+          position: 'bottom-right',
+          style: { background: '#059669', color: '#fff', borderRadius: '12px' },
+        });
+      }
+    } catch (e) {
+      console.error('Failed to upvote:', e);
+    } finally {
+      setUpvoting((prev) => ({ ...prev, [issueId]: false }));
     }
   };
 
@@ -76,12 +126,15 @@ export default function CommunityPage() {
     return grievances.map((g) => {
       const colors = getCategoryColor(g.category);
       const isHighPriority = g.priority === 'high' || g.priority === 'critical';
+      const hasUpvoted = user && g.upvotedBy?.some(id => id === user._id || id === user.id);
       return {
         id: g._id,
         title: g.title,
         location: g.userId?.name || 'Community Member',
         description: g.description,
-        upvotes: g.comments?.length || 0,
+        upvotes: g.upvotes || 0,
+        upvotedBy: g.upvotedBy || [],
+        hasUpvoted,
         filed: formatTimeAgo(g.createdAt),
         category: g.category,
         priority: g.priority,
@@ -94,7 +147,7 @@ export default function CommunityPage() {
         vote: colors.vote,
       };
     });
-  }, [grievances]);
+  }, [grievances, user]);
 
   const visibleIssues = React.useMemo(() => {
     if (activeFilter === 'all') return issues;
@@ -257,13 +310,34 @@ export default function CommunityPage() {
               <div className="flex items-center justify-between border-t pt-4">
                 <motion.button
                   type="button"
-                  whileTap={shouldReduceMotion ? undefined : { opacity: 0.9 }}
-                  className={`flex items-center gap-2 ${issue.vote.bg} ${issue.vote.text} px-4 py-2 rounded-full transition font-bold text-sm`}
+                  onClick={() => handleUpvote(issue.id)}
+                  disabled={upvoting[issue.id] || issue.hasUpvoted}
+                  title={issue.hasUpvoted ? 'You already upvoted this issue' : 'Upvote this issue'}
+                  whileHover={!issue.hasUpvoted && !upvoting[issue.id] ? { scale: 1.05 } : {}}
+                  whileTap={!issue.hasUpvoted && !upvoting[issue.id] ? { scale: 0.95 } : {}}
+                  animate={{
+                    backgroundColor: issue.hasUpvoted ? '#dcfce7' : '#fef2f2',
+                    borderColor: issue.hasUpvoted ? '#86efac' : '#fecaca',
+                    color: issue.hasUpvoted ? '#15803d' : '#b91c1c',
+                  }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm border-2 ${upvoting[issue.id] ? 'cursor-not-allowed opacity-70' : issue.hasUpvoted ? 'cursor-default' : 'cursor-pointer'}`}
                 >
-                  <span className="material-symbols-rounded text-base" aria-hidden="true">
-                    thumb_up
-                  </span>
-                  <span>{issue.upvotes} Upvotes</span>
+                  <motion.span
+                    className="text-base"
+                    animate={{ rotate: issue.hasUpvoted ? [0, -10, 10, 0] : 0, scale: issue.hasUpvoted ? [1, 1.2, 1] : 1 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    {upvoting[issue.id] ? '⏳' : issue.hasUpvoted ? '✓' : '👍'}
+                  </motion.span>
+                  <motion.span
+                    key={issue.upvotes}
+                    initial={{ y: -10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {issue.upvotes} Upvotes
+                  </motion.span>
                 </motion.button>
                 <p className="text-xs text-slate-400 font-semibold">{issue.filed}</p>
               </div>

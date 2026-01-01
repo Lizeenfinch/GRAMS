@@ -1,9 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 import Reveal from '../components/Reveal';
 import { getTransparencyReport, upvoteIssue } from '../Services/operations/transparencyAPI';
+import useAuthStore from '../store/authStore';
 
 export default function TransparencyPage() {
+  const { user } = useAuthStore();
   const [loading, setLoading] = React.useState(true);
   const [report, setReport] = React.useState(null);
   const [upvoting, setUpvoting] = React.useState({});
@@ -27,6 +31,25 @@ export default function TransparencyPage() {
   const handleUpvote = async (issueId) => {
     if (upvoting[issueId]) return;
     
+    // Check if user is logged in
+    if (!user) {
+      toast.error('Please login to upvote issues', {
+        position: 'bottom-right',
+        style: { background: '#1e293b', color: '#fff', borderRadius: '12px' },
+      });
+      return;
+    }
+
+    // Check if user already upvoted this issue
+    const issue = report?.overdueIssues?.find(i => i._id === issueId);
+    if (issue?.upvotedBy?.some(id => id === user._id || id === user.id)) {
+      toast.error('You have already upvoted this issue', {
+        position: 'bottom-right',
+        style: { background: '#1e293b', color: '#fff', borderRadius: '12px' },
+      });
+      return;
+    }
+    
     setUpvoting((prev) => ({ ...prev, [issueId]: true }));
     try {
       const token = localStorage.getItem('token');
@@ -36,10 +59,14 @@ export default function TransparencyPage() {
           ...prev,
           overdueIssues: prev.overdueIssues.map((issue) =>
             issue._id === issueId
-              ? { ...issue, upvotes: data.upvotes, priority: data.priority }
+              ? { ...issue, upvotes: data.upvotes, priority: data.priority, upvotedBy: [...(issue.upvotedBy || []), user._id || user.id] }
               : issue
           ),
         }));
+        toast.success('Upvote recorded! 🎉', {
+          position: 'bottom-right',
+          style: { background: '#059669', color: '#fff', borderRadius: '12px' },
+        });
       }
     } catch (e) {
       console.error('Failed to upvote:', e);
@@ -414,18 +441,41 @@ export default function TransparencyPage() {
                     </div>
                     <p className="text-slate-700 mb-6 leading-relaxed">{issue.description}</p>
                     <div className="flex items-center justify-between border-t pt-6">
-                      <button 
-                        onClick={() => handleUpvote(issue._id)}
-                        disabled={upvoting[issue._id]}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full transition font-bold text-sm border ${
-                          upvoting[issue._id]
-                            ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                            : 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200'
-                        }`}
-                      >
-                        <span className="text-lg">👍</span>
-                        <span>{issue.upvotes || 0} Upvotes</span>
-                      </button>
+                      {(() => {
+                        const hasUpvoted = user && issue.upvotedBy?.some(id => id === user._id || id === user.id);
+                        return (
+                          <motion.button 
+                            onClick={() => handleUpvote(issue._id)}
+                            disabled={upvoting[issue._id] || hasUpvoted}
+                            title={hasUpvoted ? 'You already upvoted this issue' : 'Upvote this issue'}
+                            whileHover={!hasUpvoted && !upvoting[issue._id] ? { scale: 1.05 } : {}}
+                            whileTap={!hasUpvoted && !upvoting[issue._id] ? { scale: 0.95 } : {}}
+                            animate={{
+                              backgroundColor: hasUpvoted ? '#dcfce7' : '#fef2f2',
+                              borderColor: hasUpvoted ? '#86efac' : '#fecaca',
+                              color: hasUpvoted ? '#15803d' : '#b91c1c',
+                            }}
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm border-2 ${upvoting[issue._id] ? 'cursor-not-allowed opacity-70' : hasUpvoted ? 'cursor-default' : 'cursor-pointer'}`}
+                          >
+                            <motion.span
+                              className="text-lg"
+                              animate={{ rotate: hasUpvoted ? [0, -10, 10, 0] : 0, scale: hasUpvoted ? [1, 1.2, 1] : 1 }}
+                              transition={{ duration: 0.4 }}
+                            >
+                              {upvoting[issue._id] ? '⏳' : hasUpvoted ? '✓' : '👍'}
+                            </motion.span>
+                            <motion.span
+                              key={issue.upvotes}
+                              initial={{ y: -10, opacity: 0 }}
+                              animate={{ y: 0, opacity: 1 }}
+                              transition={{ duration: 0.3 }}
+                            >
+                              {issue.upvotes || 0} Upvotes
+                            </motion.span>
+                          </motion.button>
+                        );
+                      })()}}
                       <p className="text-xs text-slate-500 font-semibold">👤 {issue.user?.name || 'Anonymous'}</p>
                     </div>
                   </div>

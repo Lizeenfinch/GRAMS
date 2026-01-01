@@ -76,11 +76,11 @@ export const upvoteIssue = async (id, token) => {
       throw new Error(response.data.message)
     }
 
-    toast.success("Issue upvoted successfully!")
+    // Don't show toast here - handled by component with custom animation
     return response.data.data
   } catch (error) {
     console.log("UPVOTE ISSUE API ERROR............", error)
-    toast.error(error?.response?.data?.message || "Failed to upvote issue")
+    // Don't show toast here - handled by component
     throw error
   }
 }
