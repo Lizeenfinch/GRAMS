@@ -475,7 +475,7 @@ export default function TransparencyPage() {
                             </motion.span>
                           </motion.button>
                         );
-                      })()}}
+                      })()}
                       <p className="text-xs text-slate-500 font-semibold">👤 {issue.user?.name || 'Anonymous'}</p>
                     </div>
                   </div>
