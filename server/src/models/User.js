@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['user', 'admin', 'moderator'],
+      enum: ['user', 'admin', 'moderator', 'citizen'],
       default: 'user',
     },
     department: {
@@ -41,20 +41,58 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    // Google OAuth fields
+    googleId: {
+      type: String,
+      required: false,
+      unique: true,
+      sparse: true,
+    },
+    isGoogleAuth: {
+      type: Boolean,
+      default: false,
+    },
+    isPhoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+    // Phone Auth fields
+    firebaseUid: {
+      type: String,
+      required: false,
+      unique: true,
+      sparse: true,
+    },
+    isPhoneAuth: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// Hash password before saving
+// Hash password before saving (only if modified and not OAuth/Phone Auth)
 userSchema.pre('save', async function (next) {
+  // Skip if password not modified
   if (!this.isModified('password')) {
-    next();
+    return next();
   }
 
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+  // Skip password hashing for OAuth users
+  if (this.isGoogleAuth || this.isPhoneAuth) {
+    return next();
+  }
+
+  // Hash password for regular users
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    return next();
+  } catch (error) {
+    return next(error);
+  }
 });
 
 // Method to compare passwords

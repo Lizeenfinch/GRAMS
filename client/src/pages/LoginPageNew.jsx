@@ -4,21 +4,18 @@ import useAuthStore from '../store/authStore';
 import { signInWithGoogle } from '../config/firebaseConfig';
 import Reveal from '../components/Reveal';
 import MotionImage from '../components/MotionImage';
-import { sendOTP, verifyOTP, googleLogin } from '../Services/operations/authAPI';
+import GramsLogo from '../components/GramsLogo';
+import { googleLogin } from '../Services/operations/authAPI';
 import { toast } from 'react-hot-toast';
 
 export default function LoginPageNew() {
   const [activeTab, setActiveTab] = useState('citizen');
   const [formData, setFormData] = useState({
-    citizenPhone: '',
     adminEmail: '',
     adminPassword: '',
     engId: '',
     engPasscode: ''
   });
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [generatedOtp, setGeneratedOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -29,14 +26,6 @@ export default function LoginPageNew() {
     setFormData(prev => ({
       ...prev,
       [name]: value
-    }));
-  };
-
-  const handlePhoneChange = (e) => {
-    const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 10);
-    setFormData(prev => ({
-      ...prev,
-      citizenPhone: digitsOnly
     }));
   };
 
@@ -103,9 +92,6 @@ export default function LoginPageNew() {
       }
     } catch (err) {
       setError('OTP verification failed. Please try again.');
-      console.error('Verify OTP error:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -141,19 +127,17 @@ export default function LoginPageNew() {
     
     try {
       if (provider === 'Google') {
-        // Get Google sign in result with ID token
+        // Get Google sign in result with user data
         const googleResult = await signInWithGoogle();
         
-        // Send ID token to backend for verification and JWT generation
-        const response = await googleLogin({
-          idToken: googleResult.idToken,
+        // Send user data to backend for user creation and JWT generation
+        await googleLogin({
+          name: googleResult.user.name || '',
+          email: googleResult.user.email,
+          phone: '',
+          googleId: googleResult.user.uid,
+          profilePicture: googleResult.user.photoURL || '',
         }, navigate);
-
-        if (response) {
-          // Store token and user data
-          setToken(response.token);
-          setUser(response.user);
-        }
       } else if (provider === 'Microsoft') {
         setError('Microsoft login coming soon');
       }
@@ -197,10 +181,8 @@ export default function LoginPageNew() {
                 {/* Logo */}
                 <Reveal delay={0.05}>
                   <div className="flex items-center gap-3 mb-8">
-                    <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30 flex-shrink-0">
-                      <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
-                      </svg>
+                    <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30 flex-shrink-0">
+                      <GramsLogo size={36} className="text-white" />
                     </div>
                     <div>
                       <h1 className="font-bold text-3xl tracking-tight">GRAMS</h1>
@@ -270,7 +252,7 @@ export default function LoginPageNew() {
             </div>
 
             {/* Right Side - Login Forms */}
-            <div className="lg:w-1/2 bg-gradient-to-br from-white to-green-50/30 p-7 flex flex-col justify-start overflow-y-auto max-h-[520px]">
+            <div className="lg:w-1/2 bg-gradient-to-br from-white to-green-50/30 p-7 flex flex-col justify-start">
               
               {/* Tabs */}
               <Reveal delay={0.05}>
@@ -278,10 +260,7 @@ export default function LoginPageNew() {
                   <button
                     onClick={() => {
                       setActiveTab('citizen');
-                      setOtpSent(false);
                       setError('');
-                      setOtp('');
-                      setFormData(prev => ({ ...prev, citizenPhone: '' }));
                     }}
                     className={`cursor-pointer transition-all font-bold flex items-center gap-2 text-sm ${
                       activeTab === 'citizen'
@@ -343,132 +322,86 @@ export default function LoginPageNew() {
                     </div>
                   )}
 
-                  {!otpSent ? (
-                    <>
-                      {/* Social Login */}
-                      <div className="grid grid-cols-2 gap-3 mb-5">
-                        <button
-                          onClick={() => handleSocialLogin('Google')}
-                          className="flex items-center justify-center gap-2 py-2.5 border-2 border-green-200 rounded-lg hover:bg-green-50 transition text-sm font-semibold text-slate-700 hover:border-green-400"
-                        >
-                          <MotionImage
-                            src="https://www.svgrepo.com/show/475656/google-color.svg"
-                            className="w-4 h-4"
-                            alt="Google"
-                            hoverScale={1}
-                          />
-                          Google
-                        </button>
-                        <button
-                          onClick={() => handleSocialLogin('Microsoft')}
-                          className="flex items-center justify-center gap-2 py-2.5 border-2 border-green-200 rounded-lg hover:bg-green-50 transition text-sm font-semibold text-slate-700 hover:border-green-400"
-                        >
-                          <svg className="w-4 h-4" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="9" height="9" fill="#F25022" /><rect x="13" y="1" width="9" height="9" fill="#7FBA00" /><rect x="1" y="13" width="9" height="9" fill="#00A4EF" /><rect x="13" y="13" width="9" height="9" fill="#FFB900" /></svg>
-                          Microsoft
-                        </button>
+                  {/* Email/Password Form */}
+                  <form onSubmit={(e) => handleSubmit(e, 'citizen')} className="mb-5">
+                    <div className="mb-4">
+                      <label htmlFor="citizenEmail" className="block text-xs font-bold text-slate-600 uppercase mb-2">Email Address</label>
+                      <div className="relative">
+                        <svg className="w-5 h-5 absolute left-4 top-3.5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+                        </svg>
+                        <input 
+                          id="citizenEmail"
+                          name="citizenEmail"
+                          type="email" 
+                          className="w-full pl-12 pr-4 py-3 bg-white border-2 border-green-200 rounded-lg outline-none focus:border-green-500 transition font-medium" 
+                          placeholder="your@email.com"
+                          value={formData.citizenEmail}
+                          onChange={handleInputChange}
+                          required 
+                        />
                       </div>
+                    </div>
 
-                      {/* Divider */}
-                      <div className="relative flex py-2 items-center mb-4">
-                        <div className="flex-grow border-t border-green-200"></div>
-                        <span className="flex-shrink mx-3 text-slate-400 text-xs font-semibold">OR LOGIN WITH PHONE</span>
-                        <div className="flex-grow border-t border-green-200"></div>
+                    <div className="mb-4">
+                      <label htmlFor="citizenPassword" className="block text-xs font-bold text-slate-600 uppercase mb-2">Password</label>
+                      <div className="relative">
+                        <svg className="w-5 h-5 absolute left-4 top-3.5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M18 8h-1V6c0-2.76-2.24-5-5-5s-5 2.24-5 5v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z" />
+                        </svg>
+                        <input 
+                          id="citizenPassword"
+                          name="citizenPassword"
+                          type="password" 
+                          className="w-full pl-12 pr-4 py-3 bg-white border-2 border-green-200 rounded-lg outline-none focus:border-green-500 transition font-medium" 
+                          placeholder="••••••••"
+                          value={formData.citizenPassword || ''}
+                          onChange={handleInputChange}
+                          required 
+                        />
                       </div>
+                    </div>
 
-                      {/* Phone Form */}
-                      <form onSubmit={handleSendOTP}>
-                        <div className="mb-4">
-                          <label htmlFor="citizenPhone" className="block text-xs font-bold text-slate-600 uppercase mb-1">Mobile Number (10 digits)</label>
-                          <div className="relative">
-                            <svg className="w-5 h-5 absolute left-4 top-3 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M17 2H7c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H7V4h10v16zm-5-14c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm0 14c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z" />
-                            </svg>
-                            <span className="absolute left-11 top-3 text-slate-700 text-sm font-semibold select-none">+91</span>
-                            <input 
-                              id="citizenPhone"
-                              name="citizenPhone"
-                              type="text" 
-                              inputMode="numeric"
-                              autoComplete="off"
-                              className="w-full pl-24 pr-4 py-2.5 bg-white border-2 border-green-200 rounded-lg outline-none focus:border-green-500 transition font-medium text-slate-800 text-sm tracking-wider" 
-                              placeholder="10 digits"
-                              value={formData.citizenPhone}
-                              onChange={handlePhoneChange}
-                              maxLength="10"
-                              required 
-                            />
-                            <span className="absolute right-4 top-3 text-xs text-green-600 font-semibold pointer-events-none">
-                              {formData.citizenPhone.length}/10
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <button 
-                          type="submit"
-                          disabled={loading}
-                          className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-lg font-bold hover:from-green-700 hover:to-emerald-700 transition shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
-                        >
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
-                          </svg>
-                          {loading ? 'Sending OTP...' : 'Get OTP'}
-                        </button>
-                      </form>
-                    </>
-                  ) : (
-                    <>
-                      {/* OTP Verification Form */}
-                      <div className="bg-green-50 border border-green-200 px-3 py-2 rounded-lg mb-4 text-sm text-green-700">
-                        <p className="font-semibold">OTP sent to {formData.citizenPhone}</p>
-                        <p className="text-xs mt-1">Demo OTP: {generatedOtp}</p>
-                      </div>
-                      
-                      <form onSubmit={handleVerifyOTP}>
-                        <div className="mb-4">
-                          <label htmlFor="otp" className="block text-xs font-bold text-slate-600 uppercase mb-1">Enter OTP</label>
-                          <div className="relative">
-                            <svg className="w-5 h-5 absolute left-4 top-3 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
-                            </svg>
-                            <input 
-                              id="otp"
-                              name="otp"
-                              type="text" 
-                              className="w-full pl-12 pr-4 py-2.5 bg-white border-2 border-green-200 rounded-lg outline-none focus:border-green-500 transition font-medium text-slate-800 text-sm text-center tracking-widest" 
-                              placeholder="Enter 6-digit OTP"
-                              maxLength="6"
-                              value={otp}
-                              onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
-                              required 
-                            />
-                          </div>
-                        </div>
-                        
-                        <button 
-                          type="submit"
-                          disabled={loading}
-                          className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-lg font-bold hover:from-green-700 hover:to-emerald-700 transition shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
-                        >
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                          </svg>
-                          {loading ? 'Verifying...' : 'Verify OTP'}
-                        </button>
+                    <button 
+                      type="submit"
+                      disabled={loading}
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-lg font-bold hover:from-green-700 hover:to-emerald-700 transition shadow-lg shadow-green-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2-13h4v6h-4z" />
+                      </svg>
+                      {loading ? 'Logging in...' : 'Login'}
+                    </button>
+                  </form>
 
-                        <button 
-                          type="button"
-                          onClick={() => {
-                            setOtpSent(false);
-                            setOtp('');
-                            setError('');
-                          }}
-                          className="w-full mt-2 bg-slate-100 text-slate-700 py-2 rounded-lg font-semibold hover:bg-slate-200 transition text-sm"
-                        >
-                          Back
-                        </button>
-                      </form>
-                    </>
-                  )}
+                  {/* Social Login */}
+                  <div className="flex items-center gap-3 mb-5 mt-5">
+                    <div className="flex-grow border-t border-green-200"></div>
+                    <span className="text-xs text-slate-400 font-semibold">OR</span>
+                    <div className="flex-grow border-t border-green-200"></div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mb-5">
+                    <button
+                      onClick={() => handleSocialLogin('Google')}
+                      className="flex items-center justify-center gap-2 py-2.5 border-2 border-green-200 rounded-lg hover:bg-green-50 transition text-sm font-semibold text-slate-700 hover:border-green-400"
+                    >
+                      <MotionImage
+                        src="https://www.svgrepo.com/show/475656/google-color.svg"
+                        className="w-4 h-4"
+                        alt="Google"
+                        hoverScale={1}
+                      />
+                      Google
+                    </button>
+                    <button
+                      onClick={() => handleSocialLogin('Microsoft')}
+                      className="flex items-center justify-center gap-2 py-2.5 border-2 border-green-200 rounded-lg hover:bg-green-50 transition text-sm font-semibold text-slate-700 hover:border-green-400"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="9" height="9" fill="#F25022" /><rect x="13" y="1" width="9" height="9" fill="#7FBA00" /><rect x="1" y="13" width="9" height="9" fill="#00A4EF" /><rect x="13" y="13" width="9" height="9" fill="#FFB900" /></svg>
+                      Microsoft
+                    </button>
+                  </div>
 
                   <p className="mt-4 text-xs text-slate-400 text-center">
                     By continuing you agree to our <a href="#" className="text-green-600 hover:underline">Terms & Privacy Policy</a>
@@ -615,6 +548,5 @@ export default function LoginPageNew() {
           animation: fadeIn 0.3s ease-in-out;
         }
       `}</style>
-    </section>
-  );
+    </section>)
 }

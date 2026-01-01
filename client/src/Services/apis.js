@@ -9,6 +9,11 @@ export const authEndpoints = {
   SEND_OTP_API: BASE_URL + "/auth/send-otp",
   VERIFY_OTP_API: BASE_URL + "/auth/verify-otp",
   GOOGLE_LOGIN_API: BASE_URL + "/auth/google-login",
+  // Email OTP Endpoints
+  SEND_EMAIL_OTP_API: BASE_URL + "/auth/send-email-otp",
+  VERIFY_EMAIL_OTP_API: BASE_URL + "/auth/verify-email-otp",
+  COMPLETE_REGISTRATION_API: BASE_URL + "/auth/complete-registration",
+  RESEND_EMAIL_OTP_API: BASE_URL + "/auth/resend-email-otp",
 }
 
 // GRIEVANCE ENDPOINTS

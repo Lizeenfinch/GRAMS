@@ -10,6 +10,8 @@ import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import LoginPageNew from './pages/LoginPageNew';
 import RegisterPageNew from './pages/RegisterPageNew';
+import OTPVerificationPage from './pages/OTPVerificationPage';
+import CompleteRegistrationPage from './pages/CompleteRegistrationPage';
 import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
 import TransparencyPage from './pages/TransparencyPage';
@@ -104,7 +106,7 @@ function AnimatedRoutes() {
           path="/login"
           element={
             <PageTransition>
-              <LoginPageNew />
+              <LoginPageNew/>
             </PageTransition>
           }
         />
@@ -113,6 +115,22 @@ function AnimatedRoutes() {
           element={
             <PageTransition>
               <RegisterPageNew />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/verify-otp"
+          element={
+            <PageTransition>
+              <OTPVerificationPage />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/complete-registration"
+          element={
+            <PageTransition>
+              <CompleteRegistrationPage />
             </PageTransition>
           }
         />

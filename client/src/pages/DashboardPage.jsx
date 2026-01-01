@@ -104,7 +104,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-slate-200 mt-16">
+      <div className="bg-white shadow-sm border-b border-slate-200 mt-20">
         <div className="max-w-7xl mx-auto px-6 py-8">
           <Reveal delay={0.05}>
             <div className="flex justify-between items-center">

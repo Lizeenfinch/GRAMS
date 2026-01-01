@@ -19,19 +19,32 @@ export const auth = getAuth(app);
 
 // Configure reCAPTCHA
 export const setupRecaptcha = (containerId) => {
+  // Check if container exists
+  const container = document.getElementById(containerId);
+  if (!container) {
+    console.error(`reCAPTCHA container with id '${containerId}' not found`);
+    return;
+  }
+
+  // Clear existing verifier
   if (window.recaptchaVerifier) {
     window.recaptchaVerifier.clear();
   }
 
-  window.recaptchaVerifier = new RecaptchaVerifier(containerId, {
-    size: 'normal',
-    callback: (response) => {
-      console.log('reCAPTCHA verified');
-    },
-    'expired-callback': () => {
-      console.log('reCAPTCHA expired');
-    },
-  }, auth);
+  try {
+    window.recaptchaVerifier = new RecaptchaVerifier(containerId, {
+      size: 'normal',
+      callback: (response) => {
+        console.log('✅ reCAPTCHA verified');
+      },
+      'expired-callback': () => {
+        console.log('⚠️ reCAPTCHA expired');
+      },
+    }, auth);
+  } catch (error) {
+    console.error('Error setting up reCAPTCHA:', error);
+    throw error;
+  }
 };
 
 // Send OTP

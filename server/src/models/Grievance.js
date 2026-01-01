@@ -1,7 +1,20 @@
 const mongoose = require('mongoose');
 
+// Function to generate unique tracking ID
+const generateTrackingId = () => {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `GRAMS-${timestamp}-${randomStr}`;
+};
+
 const grievanceSchema = new mongoose.Schema(
   {
+    trackingId: {
+      type: String,
+      unique: true,
+      required: true,
+      default: generateTrackingId,
+    },
     title: {
       type: String,
       required: true,
@@ -13,7 +26,7 @@ const grievanceSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['water', 'waste', 'roads', 'electric', 'other'],
+      enum: ['water', 'waste', 'roads', 'electric', 'administrative', 'healthcare', 'education', 'sanitation', 'other'],
       required: true,
     },
     priority: {
@@ -41,6 +54,10 @@ const grievanceSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+      required: true,
+    },
+    userEmail: {
+      type: String,
       required: true,
     },
     assignedTo: {

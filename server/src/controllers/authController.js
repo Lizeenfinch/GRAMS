@@ -2,9 +2,13 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { sendOTP, verifyOTP } = require('../utils/smsService');
 const admin = require('firebase-admin');
+const mailsender = require('../mail/Mailsender');
+const otpVerificationTemplate = require('../mail/mailtemplates/otpVerificationTemplate');
+const welcomeTemplate = require('../mail/mailtemplates/welcomeTemplate');
 
 // Store OTP data temporarily (use Redis for production)
 const otpStore = new Map();
+const emailOtpStore = new Map();
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -174,126 +178,126 @@ exports.sendOTP = async (req, res) => {
 // Verify OTP and Login Citizen
 exports.verifyCitizenOTP = async (req, res) => {
   try {
-    const { phone, otp } = req.body;
+    const { phone, idToken, firebaseUid } = req.body;
 
-    if (!phone || !otp) {
+    if (!phone || !idToken || !firebaseUid) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Phone number and OTP are required' 
+        message: 'Phone, ID token, and Firebase UID are required' 
       });
     }
 
-    // Check if OTP exists and is not expired
-    const storedData = otpStore.get(phone);
-    if (!storedData) {
+    // Verify ID token with Firebase Admin SDK
+    let decodedToken;
+    try {
+      decodedToken = await admin.auth().verifyIdToken(idToken);
+      console.log('✅ Firebase token verified:', decodedToken);
+    } catch (error) {
+      console.error('Firebase token verification error:', error);
       return res.status(401).json({ 
         success: false, 
-        message: 'OTP not found or expired. Please request a new OTP.' 
+        message: 'Invalid or expired token' 
       });
     }
 
-    // Check if OTP has expired
-    if (Date.now() - storedData.createdAt > storedData.expiresIn) {
-      otpStore.delete(phone);
+    // Verify Firebase UID matches
+    if (decodedToken.uid !== firebaseUid) {
       return res.status(401).json({ 
         success: false, 
-        message: 'OTP has expired. Please request a new OTP.' 
+        message: 'Token UID does not match' 
       });
     }
 
-    // Check OTP attempts
-    if (storedData.attempts >= 3) {
-      otpStore.delete(phone);
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Maximum OTP attempts exceeded. Please request a new OTP.' 
-      });
-    }
-
-    // Verify OTP
-    if (otp !== storedData.otp) {
-      storedData.attempts += 1;
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Invalid OTP. Please try again.',
-        attemptsRemaining: 3 - storedData.attempts
-      });
-    }
-
-    // OTP is valid, find or create citizen user
+    // Find or create user by phone
     let user = await User.findOne({ phone });
     
     if (!user) {
-      // Create new citizen user
+      // Create new user for phone auth (NO PASSWORD)
       user = new User({
         phone,
-        name: `Citizen-${phone.slice(-4)}`,
-        email: `citizen-${Date.now()}@grams.local`,
+        firebaseUid,
+        name: `User-${phone.slice(-4)}`,
+        email: `phone-${Date.now()}@grams.local`,
         role: 'citizen',
-        isPhoneVerified: true
+        isPhoneVerified: true,
+        // NO password field - it will use pre-save hook to generate random one
+        isPhoneAuth: true
       });
       await user.save();
+      console.log('✅ New phone auth user created:', user._id);
     } else {
-      // Update phone verification status
+      // Update existing user
+      user.firebaseUid = firebaseUid;
       user.isPhoneVerified = true;
+      user.isPhoneAuth = true;
       await user.save();
+      console.log('✅ Existing user updated with phone auth');
     }
-
-    // Clear OTP from store
-    otpStore.delete(phone);
 
     // Generate JWT token
     const token = generateToken(user._id);
 
     res.status(200).json({
       success: true,
-      message: 'OTP verified successfully',
+      message: 'Phone authentication successful',
       token,
       user: {
         id: user._id,
-        phone: user.phone,
         name: user.name,
-        role: user.role
-      }
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        firebaseUid: user.firebaseUid
+      },
     });
   } catch (error) {
-    console.error('Verify OTP error:', error);
+    console.error('Phone OTP verification error:', error);
     res.status(500).json({ 
-      success: false,
-      message: error.message 
+      message: 'Phone authentication failed',
+      error: error.message 
     });
   }
 };
 
-// Google OAuth Login
+// Google OAuth Login/Sign Up
 exports.googleLogin = async (req, res) => {
   try {
-    const { idToken } = req.body;
-
-    if (!idToken) {
-      return res.status(400).json({ message: 'ID token is required' });
-    }
-
-    // Verify the ID token with Firebase Admin SDK
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    const { email, name, picture, uid } = decodedToken;
+    const { name, email, phone, googleId, profilePicture } = req.body;
 
     if (!email) {
-      return res.status(400).json({ message: 'Email not found in token' });
+      return res.status(400).json({ message: 'Email is required' });
     }
 
     // Check if user exists
     let user = await User.findOne({ email });
 
     if (!user) {
-      // Create new user if doesn't exist
+      // Create new user if doesn't exist (Sign up)
       user = new User({
         name: name || email.split('@')[0],
         email,
+        phone: phone || '',
+        googleId: googleId || '',
         role: 'user',
         // For OAuth users, we don't store password
-        password: Math.random().toString(36).slice(-10), // Random placeholder
+        password: Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10),
+        isGoogleAuth: true,
+        profilePicture: profilePicture || ''
       });
+      await user.save();
+      console.log('New user created via Google:', user._id);
+    } else {
+      // Update existing user with Google data if needed
+      if (!user.googleId && googleId) {
+        user.googleId = googleId;
+      }
+      if (!user.phone && phone) {
+        user.phone = phone;
+      }
+      if (!user.profilePicture && profilePicture) {
+        user.profilePicture = profilePicture;
+      }
+      user.isGoogleAuth = true;
       await user.save();
     }
 
@@ -307,13 +311,290 @@ exports.googleLogin = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
-        profilePicture: picture,
+        profilePicture: user.profilePicture,
       },
     });
   } catch (error) {
-    console.error('Google login error:', error);
+    console.error('Google login/signup error:', error);
     res.status(500).json({ message: 'Google authentication failed' });
   }
 };
 
+// Send Email OTP for Registration
+exports.sendEmailOTP = async (req, res) => {
+  try {
+    const { email, name } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email format'
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'User with this email already exists. Please login instead.'
+      });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store OTP with expiry (10 minutes)
+    emailOtpStore.set(email, {
+      otp,
+      name: name || 'User',
+      createdAt: Date.now(),
+      expiresIn: 10 * 60 * 1000, // 10 minutes
+      attempts: 0,
+      verified: false
+    });
+
+    // Send OTP via email
+    const emailBody = otpVerificationTemplate(otp, name || 'User');
+    const mailResult = await mailsender(
+      email,
+      'Verify Your Email - GRAMS Registration',
+      emailBody
+    );
+
+    if (!mailResult) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send verification email. Please try again.'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'OTP sent successfully to your email',
+      email: email,
+      // Remove in production
+      demoOTP: process.env.NODE_ENV === 'development' ? otp : undefined
+    });
+
+  } catch (error) {
+    console.error('Send email OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send OTP. Please try again.'
+    });
+  }
+};
+
+// Verify Email OTP
+exports.verifyEmailOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and OTP are required'
+      });
+    }
+
+    // Get stored OTP data
+    const otpData = emailOtpStore.get(email);
+
+    if (!otpData) {
+      return res.status(400).json({
+        success: false,
+        message: 'OTP expired or not found. Please request a new OTP.'
+      });
+    }
+
+    // Check expiry
+    if (Date.now() - otpData.createdAt > otpData.expiresIn) {
+      emailOtpStore.delete(email);
+      return res.status(400).json({
+        success: false,
+        message: 'OTP has expired. Please request a new OTP.'
+      });
+    }
+
+    // Check attempts
+    if (otpData.attempts >= 3) {
+      emailOtpStore.delete(email);
+      return res.status(400).json({
+        success: false,
+        message: 'Too many failed attempts. Please request a new OTP.'
+      });
+    }
+
+    // Verify OTP
+    if (otpData.otp !== otp) {
+      otpData.attempts += 1;
+      emailOtpStore.set(email, otpData);
+      return res.status(400).json({
+        success: false,
+        message: `Invalid OTP. ${3 - otpData.attempts} attempts remaining.`
+      });
+    }
+
+    // Mark as verified
+    otpData.verified = true;
+    emailOtpStore.set(email, otpData);
+
+    res.status(200).json({
+      success: true,
+      message: 'Email verified successfully',
+      email: email
+    });
+
+  } catch (error) {
+    console.error('Verify email OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'OTP verification failed. Please try again.'
+    });
+  }
+};
+
+// Complete Registration after OTP verification
+exports.completeRegistration = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, email and password are required'
+      });
+    }
+
+    // Check if email was verified
+    const otpData = emailOtpStore.get(email);
+    if (!otpData || !otpData.verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email not verified. Please verify your email first.'
+      });
+    }
+
+    // Check if user already exists
+    let user = await User.findOne({ email });
+    if (user) {
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists'
+      });
+    }
+
+    // Create new user
+    user = new User({
+      name,
+      email,
+      password,
+      isEmailVerified: true
+    });
+
+    await user.save();
+
+    // Clear OTP data
+    emailOtpStore.delete(email);
+
+    // Send welcome email
+    const welcomeBody = welcomeTemplate(name);
+    await mailsender(email, 'Welcome to GRAMS!', welcomeBody);
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful! Please login to continue.',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      }
+    });
+
+  } catch (error) {
+    console.error('Complete registration error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Registration failed. Please try again.'
+    });
+  }
+};
+
+// Resend Email OTP
+exports.resendEmailOTP = async (req, res) => {
+  try {
+    const { email, name } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Check cooldown (prevent spam - 1 minute between requests)
+    const existingOtp = emailOtpStore.get(email);
+    if (existingOtp && Date.now() - existingOtp.createdAt < 60000) {
+      const remainingTime = Math.ceil((60000 - (Date.now() - existingOtp.createdAt)) / 1000);
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${remainingTime} seconds before requesting a new OTP`
+      });
+    }
+
+    // Generate new OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store new OTP
+    emailOtpStore.set(email, {
+      otp,
+      name: name || existingOtp?.name || 'User',
+      createdAt: Date.now(),
+      expiresIn: 10 * 60 * 1000,
+      attempts: 0,
+      verified: false
+    });
+
+    // Send OTP via email
+    const emailBody = otpVerificationTemplate(otp, name || existingOtp?.name || 'User');
+    const mailResult = await mailsender(
+      email,
+      'Verify Your Email - GRAMS Registration',
+      emailBody
+    );
+
+    if (!mailResult) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send verification email. Please try again.'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'New OTP sent successfully',
+      email: email,
+      demoOTP: process.env.NODE_ENV === 'development' ? otp : undefined
+    });
+
+  } catch (error) {
+    console.error('Resend email OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to resend OTP. Please try again.'
+    });
+  }
+};

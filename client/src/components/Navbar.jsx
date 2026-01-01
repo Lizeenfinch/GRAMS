@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import useAuthStore from '../store/authStore';
@@ -12,6 +12,19 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const shouldReduceMotion = useReducedMotion();
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setActiveDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -62,32 +75,32 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 w-full z-50 glass-nav transition-all duration-500 ease-in-out shadow-lg">
-      <div className="w-full px-4 sm:px-8 h-20 flex items-center justify-between">
+      <div className="w-full px-4 sm:px-6 h-16 flex items-center justify-between">
         
         {/* Left: Logo */}
         <Link 
           to="/" 
-          className="flex items-center gap-3 group shrink-0 transition-all duration-300 ease-out"
+          className="flex items-center gap-2 group shrink-0 transition-all duration-300 ease-out"
         >
           <motion.div 
-            className="shadow-lg group-hover:shadow-green-500/40 rounded-lg"
+            className="shadow-md group-hover:shadow-green-500/30 rounded-lg"
             whileHover={{ scale: 1.1, rotate: 5 }}
             whileTap={{ scale: 0.95 }}
             transition={{ type: "spring", stiffness: 300, damping: 15 }}
           >
-            <GramsLogo size={48} />
+            <GramsLogo size={40} />
           </motion.div>
           <div className="text-left leading-tight">
-            <span className="text-base font-black text-slate-800 block group-hover:text-green-600 transition-colors duration-300">GRAMS</span>
-            <span className="text-[10px] text-green-700 uppercase font-bold tracking-wider">Grievance System</span>
+            <span className="text-sm font-black text-slate-800 block group-hover:text-green-600 transition-colors duration-300">GRAMS</span>
+            <span className="text-[9px] text-green-700 uppercase font-bold tracking-wider">Grievance</span>
           </div>
         </Link>
 
         {/* Center: Navigation Links */}
-        <div className={`nav-menu hidden lg:flex items-center gap-2 text-sm transition-all duration-300 ease-in-out ${showMenu ? 'active' : ''}`}>
+        <div className={`nav-menu hidden lg:flex items-center gap-1.5 text-sm transition-all duration-300 ease-in-out ${showMenu ? 'active' : ''}`}>
           
           {/* Main Navigation */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             <motion.div
               variants={navItemVariants}
               initial="rest"
@@ -98,8 +111,8 @@ export default function Navbar() {
                 to="/" 
                 onMouseEnter={() => setHoveredLink('home')}
                 onMouseLeave={() => setHoveredLink(null)}
-                className={`top-nav-link px-4 py-2.5 rounded-xl text-slate-700 font-semibold flex items-center gap-2 transition-all duration-300 ease-out relative group ${
-                  isActive('/') ? 'bg-green-100 text-green-700 shadow-md' : 'hover:bg-green-50 hover:text-green-600'
+                className={`top-nav-link px-3 py-2 rounded-lg text-slate-700 font-semibold flex items-center gap-2 transition-all duration-300 ease-out relative group text-xs ${
+                  isActive('/track') ? 'bg-green-100 text-green-700 shadow-sm' : 'hover:bg-green-50 hover:text-green-600'
                 }`}
               >
                 <motion.svg 
@@ -132,8 +145,8 @@ export default function Navbar() {
                 onMouseEnter={() => setHoveredLink('transparency')}
                 onMouseLeave={() => setHoveredLink(null)}
                 onClick={handleNavClick}
-                className={`top-nav-link px-4 py-2.5 rounded-xl text-slate-700 font-semibold flex items-center gap-2 transition-all duration-300 ease-out relative group ${
-                  isActive('/transparency') ? 'bg-green-100 text-green-700 shadow-md' : 'hover:bg-green-50 hover:text-green-600'
+                className={`top-nav-link px-3 py-2 rounded-lg text-slate-700 font-semibold flex items-center gap-2 transition-all duration-300 ease-out relative group text-xs ${
+                  isActive('/transparency') ? 'bg-green-100 text-green-700 shadow-sm' : 'hover:bg-green-50 hover:text-green-600'
                 }`}
               >
                 <motion.svg 
@@ -167,8 +180,8 @@ export default function Navbar() {
                 onMouseEnter={() => setHoveredLink('community')}
                 onMouseLeave={() => setHoveredLink(null)}
                 onClick={handleNavClick}
-                className={`top-nav-link px-4 py-2.5 rounded-xl text-slate-700 font-semibold flex items-center gap-2 transition-all duration-300 ease-out relative group ${
-                  isActive('/community') ? 'bg-green-100 text-green-700 shadow-md' : 'hover:bg-green-50 hover:text-green-600'
+                className={`top-nav-link px-3 py-2 rounded-lg text-slate-700 font-semibold flex items-center gap-2 transition-all duration-300 ease-out relative group text-xs ${
+                  isActive('/community') ? 'bg-green-100 text-green-700 shadow-sm' : 'hover:bg-green-50 hover:text-green-600'
                 }`}
               >
                 <motion.svg 
@@ -241,8 +254,8 @@ export default function Navbar() {
                 onMouseEnter={() => setHoveredLink('performance')}
                 onMouseLeave={() => setHoveredLink(null)}
                 onClick={handleNavClick}
-                className={`top-nav-link px-3 py-2 rounded-lg text-slate-700 font-medium flex items-center gap-2 transition-all duration-300 ease-out hover:bg-green-50 hover:text-green-600 relative group ${
-                  isActive('/performance') ? 'bg-green-100 text-green-700 shadow-md' : ''
+                className={`top-nav-link px-3 py-2 rounded-lg text-slate-700 font-medium flex items-center gap-2 transition-all duration-300 ease-out hover:bg-green-50 hover:text-green-600 relative group text-xs ${
+                  isActive('/performance') ? 'bg-green-100 text-green-700 shadow-sm' : ''
                 }`}
               >
                 <motion.svg 
@@ -275,8 +288,8 @@ export default function Navbar() {
                 onMouseEnter={() => setHoveredLink('status')}
                 onMouseLeave={() => setHoveredLink(null)}
                 onClick={handleNavClick}
-                className={`top-nav-link px-3 py-2 rounded-lg text-slate-700 font-medium flex items-center gap-2 transition-all duration-300 ease-out hover:bg-green-50 hover:text-green-600 relative group ${
-                  isActive('/status') ? 'bg-green-100 text-green-700 shadow-md' : ''
+                className={`top-nav-link px-3 py-2 rounded-lg text-slate-700 font-medium flex items-center gap-2 transition-all duration-300 ease-out hover:bg-green-50 hover:text-green-600 relative group text-xs ${
+                  isActive('/status') ? 'bg-green-100 text-green-700 shadow-sm' : ''
                 }`}
               >
                 <motion.svg 
@@ -354,9 +367,9 @@ export default function Navbar() {
           {/* Profile Dropdown (shown when logged in) */}
           {isAuthenticated ? (
             <motion.div 
+              ref={dropdownRef}
               className="flex items-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 px-3 py-2 rounded-xl border border-green-200 hover:border-green-400 transition-all duration-300 cursor-pointer group relative hover:shadow-lg"
-              onMouseEnter={() => setActiveDropdown(true)}
-              onMouseLeave={() => setActiveDropdown(false)}
+              onClick={() => setActiveDropdown(!activeDropdown)}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -375,7 +388,7 @@ export default function Navbar() {
 
               {/* Dropdown Menu */}
               <motion.div
-                className="absolute top-full right-0 mt-3 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 min-w-[200px] origin-top"
+                className="absolute top-full right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 min-w-[200px] origin-top"
                 initial={false}
                 animate={
                   shouldReduceMotion

@@ -2,19 +2,22 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import Reveal from '../components/Reveal';
-import { register } from '../Services/operations/authAPI';
+import MotionImage from '../components/MotionImage';
+import GramsLogo from '../components/GramsLogo';
+import { register, googleSignUp, sendEmailOTP } from '../Services/operations/authAPI';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { auth } from '../config/firebaseConfig';
+import { toast } from 'react-hot-toast';
 
 export default function RegisterPageNew() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: '',
-    confirmPassword: '',
-    phone: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
   const { setUser, setToken } = useAuthStore();
 
@@ -24,6 +27,43 @@ export default function RegisterPageNew() {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleGoogleSignUp = async () => {
+    setGoogleLoading(true);
+    setError('');
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      const googleData = {
+        name: user.displayName || '',
+        email: user.email,
+        phone: user.phoneNumber || '',
+        googleId: user.uid,
+        profilePicture: user.photoURL || '',
+      };
+
+      await googleSignUp(googleData, navigate);
+    } catch (err) {
+      console.error('Google Sign-up error:', err);
+      
+      // Handle specific Firebase errors
+      if (err.code === 'auth/operation-not-allowed') {
+        setError('Google Sign-in is not enabled. Please enable it in Firebase Console under Authentication > Sign-in method > Google');
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        setError('Sign-up cancelled. Please try again.');
+      } else if (err.code === 'auth/popup-blocked') {
+        setError('Pop-up was blocked. Please allow pop-ups and try again.');
+      } else {
+        setError(err.message || 'Google sign-up failed. Please try again.');
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   const validateForm = () => {
@@ -37,18 +77,6 @@ export default function RegisterPageNew() {
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       setError('Please enter a valid email address');
-      return false;
-    }
-    if (!formData.password) {
-      setError('Password is required');
-      return false;
-    }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return false;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
       return false;
     }
     return true;
@@ -66,18 +94,21 @@ export default function RegisterPageNew() {
     setLoading(true);
 
     try {
-      await register({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        phone: formData.phone,
-        role: 'user'
-      }, navigate);
+      // Send OTP to email
+      const response = await sendEmailOTP(formData.email, formData.name);
 
-      setSuccess('Registration successful! Redirecting...');
-      setTimeout(() => navigate('/dashboard'), 1500);
+      if (response?.success) {
+        toast.success('OTP sent to your email!');
+        // Navigate to OTP verification page
+        navigate('/verify-otp', { 
+          state: { 
+            email: formData.email, 
+            name: formData.name 
+          } 
+        });
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      setError(err.message || 'Failed to send OTP. Please try again.');
       console.error('Registration error:', err);
     } finally {
       setLoading(false);
@@ -108,10 +139,8 @@ export default function RegisterPageNew() {
                 {/* Logo */}
                 <Reveal delay={0.05}>
                   <div className="flex items-center gap-3 mb-8">
-                    <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30 flex-shrink-0">
-                      <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
-                      </svg>
+                    <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30 flex-shrink-0">
+                      <GramsLogo size={36} className="text-white" />
                     </div>
                     <div>
                       <h1 className="font-bold text-3xl tracking-tight">GRAMS</h1>
@@ -131,61 +160,95 @@ export default function RegisterPageNew() {
                 </Reveal>
               </div>
 
-              {/* Bottom Badges */}
-              <Reveal delay={0.12}>
-                <div className="relative z-10 space-y-2 mb-8">
-                  <div className="flex items-center gap-2 text-xs text-green-100">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span>✓ Fast & Secure</span>
+              {/* Image with overlay */}
+                <div className="relative h-44 mb-4">
+                  <div className="absolute inset-0 bg-gradient-to-t from-green-600/80 to-transparent rounded-2xl z-10"></div>
+                  <MotionImage
+                    src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=500&h=250&fit=crop&auto=format" 
+                    alt="Join GRAMS" 
+                    className="rounded-2xl w-full h-full object-cover shadow-lg border-4 border-white/20"
+                    hoverScale={1.03}
+                  />
+                  <Reveal className="absolute bottom-4 left-4 right-4 z-20 text-white" delay={0.12}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                      </svg>
+                      <span className="text-sm font-bold">Join 12,000+ Citizens</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold border border-white/30">
+                        Fast & Secure
+                      </div>
+                      <div className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold border border-white/30">
+                        Privacy Protected
+                      </div>
+                    </div>
+                  </Reveal>
+                </div>
+
+              {/* Features Section */}
+              <Reveal delay={0.15}>
+                <div className="relative z-10 grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
+                    <div className="w-8 h-8 bg-yellow-400/20 rounded-lg flex items-center justify-center mb-2">
+                      <svg className="w-4 h-4 text-yellow-300" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                      </svg>
+                    </div>
+                    <h4 className="text-xs font-bold text-white mb-1">Easy Filing</h4>
+                    <p className="text-[10px] text-green-200">Submit complaints in minutes</p>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-green-100">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span>✓ Privacy Protected</span>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
+                    <div className="w-8 h-8 bg-blue-400/20 rounded-lg flex items-center justify-center mb-2">
+                      <svg className="w-4 h-4 text-blue-300" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                      </svg>
+                    </div>
+                    <h4 className="text-xs font-bold text-white mb-1">Track Status</h4>
+                    <p className="text-[10px] text-green-200">Real-time updates</p>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
+                    <div className="w-8 h-8 bg-purple-400/20 rounded-lg flex items-center justify-center mb-2">
+                      <svg className="w-4 h-4 text-purple-300" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                      </svg>
+                    </div>
+                    <h4 className="text-xs font-bold text-white mb-1">Community</h4>
+                    <p className="text-[10px] text-green-200">Join fellow citizens</p>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
+                    <div className="w-8 h-8 bg-orange-400/20 rounded-lg flex items-center justify-center mb-2">
+                      <svg className="w-4 h-4 text-orange-300" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                      </svg>
+                    </div>
+                    <h4 className="text-xs font-bold text-white mb-1">Transparency</h4>
+                    <p className="text-[10px] text-green-200">View public data</p>
                   </div>
                 </div>
               </Reveal>
 
-              {/* Decorative Image Section - Centered */}
-              <Reveal delay={0.15}>
-              <div className="relative z-10 flex flex-col items-center justify-center mt-auto">
-                <div className="w-full max-w-xs rounded-2xl overflow-hidden border-4 border-white/20 backdrop-blur-sm shadow-xl p-8 bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center min-h-[220px]">
-                  {/* Clean SVG Icon */}
-                  <svg className="w-32 h-32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    {/* Document */}
-                    <rect x="25" y="15" width="50" height="65" rx="3" fill="white" stroke="white" strokeWidth="1.5" />
-                    
-                    {/* Lines on document */}
-                    <line x1="32" y1="25" x2="68" y2="25" stroke="#10b981" strokeWidth="2" strokeLinecap="round" />
-                    <line x1="32" y1="35" x2="68" y2="35" stroke="#10b981" strokeWidth="1.5" opacity="0.7" strokeLinecap="round" />
-                    <line x1="32" y1="43" x2="55" y2="43" stroke="#10b981" strokeWidth="1.5" opacity="0.7" strokeLinecap="round" />
-                    <line x1="32" y1="51" x2="68" y2="51" stroke="#10b981" strokeWidth="1.5" opacity="0.7" strokeLinecap="round" />
-                    <line x1="32" y1="59" x2="55" y2="59" stroke="#10b981" strokeWidth="1.5" opacity="0.7" strokeLinecap="round" />
-                    
-                    {/* Left hand */}
-                    <path d="M 22 45 Q 18 40 18 32 Q 18 26 22 22" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                    <circle cx="22" cy="20" r="3.5" fill="white" />
-                    
-                    {/* Right hand */}
-                    <path d="M 78 45 Q 82 40 82 32 Q 82 26 78 22" stroke="white" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                    <circle cx="78" cy="20" r="3.5" fill="white" />
-                    
-                    {/* Checkmark badge */}
-                    <circle cx="50" cy="82" r="12" fill="#34d399" stroke="white" strokeWidth="2" />
-                    <path d="M 46 82 L 49 85 L 55 79" stroke="white" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-
-                {/* Text below image */}
-                <div className="mt-6 text-center">
-                  <h3 className="text-lg font-bold text-white mb-2">Easy Grievance Filing</h3>
-                  <p className="text-sm text-green-100 max-w-xs">Report and track your civic issues with ease and transparency</p>
+              {/* Footer */}
+              <div className="relative z-10 mt-auto pt-6 border-t border-white/20">
+                <div className="flex items-center gap-3 text-xs text-green-200 flex-wrap">
+                  <div className="flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
+                    </svg>
+                    <span>Secure</span>
+                  </div>
+                  <div className="w-1 h-1 rounded-full bg-green-300"></div>
+                  <div className="flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M18 8h-1V6c0-2.76-2.24-5-5-5s-5 2.24-5 5v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6z" />
+                    </svg>
+                    <span>Encrypted</span>
+                  </div>
+                  <div className="w-1 h-1 rounded-full bg-green-300"></div>
+                  <span>© 2025 Nexus TechSol</span>
                 </div>
               </div>
-              </Reveal>
             </div>
 
             {/* Right Side - Form Section */}
@@ -194,6 +257,61 @@ export default function RegisterPageNew() {
                 <Reveal delay={0.05}>
                   <h3 className="text-2xl font-bold text-slate-900 mb-2">Create Account</h3>
                   <p className="text-slate-600 text-sm mb-6">Fill in your details to get started</p>
+                </Reveal>
+
+                {/* Google Sign-up Button */}
+                <Reveal delay={0.08}>
+                  <button
+                    type="button"
+                    onClick={handleGoogleSignUp}
+                    disabled={googleLoading}
+                    className="w-full flex items-center justify-center gap-3 px-4 py-3 mb-6 border-2 border-gray-300 rounded-xl hover:border-gray-400 hover:bg-gray-50 transition-all font-semibold text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {googleLoading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span>Signing up...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                        <span>Continue with Google</span>
+                      </>
+                    )}
+                  </button>
+                </Reveal>
+
+                {/* Info Box for Google Setup */}
+                {error && error.includes('not-allowed') && (
+                  <Reveal delay={0.09}>
+                    <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg mb-4 text-xs">
+                      <p className="font-semibold mb-2">ℹ️ Google Sign-In Setup Required</p>
+                      <p>Google Sign-In needs to be enabled in Firebase Console:</p>
+                      <ol className="list-decimal list-inside mt-2 space-y-1">
+                        <li>Go to Firebase Console → Authentication</li>
+                        <li>Click "Sign-in method" tab</li>
+                        <li>Find "Google" and click it</li>
+                        <li>Toggle to "Enabled" (blue)</li>
+                        <li>Click "SAVE"</li>
+                        <li>Hard refresh this page (Ctrl+Shift+R)</li>
+                      </ol>
+                      <p className="mt-2 font-semibold">See GOOGLE_SIGNIN_ENABLE.md for detailed steps</p>
+                    </div>
+                  </Reveal>
+                )}
+
+                {/* Divider */}
+                <Reveal delay={0.10}>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="flex-1 h-px bg-gray-300"></div>
+                    <span className="text-xs text-gray-500 font-semibold">OR</span>
+                    <div className="flex-1 h-px bg-gray-300"></div>
+                  </div>
                 </Reveal>
 
                 {error && (
@@ -255,62 +373,15 @@ export default function RegisterPageNew() {
                     </div>
                   </div>
 
-                  {/* Phone (Optional) */}
-                  <div>
-                    <label htmlFor="phone" className="block text-xs font-bold text-slate-600 uppercase mb-2">Phone Number (Optional)</label>
-                    <div className="relative">
-                      <svg className="w-5 h-5 absolute left-4 top-3.5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17 2H7c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H7V4h10v16zm-5-14c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm0 14c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z" />
+                  {/* Info Box */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                       </svg>
-                      <input 
-                        id="phone"
-                        name="phone"
-                        type="tel" 
-                        className="w-full pl-12 pr-4 py-3 bg-white border-2 border-green-200 rounded-xl outline-none focus:border-green-500 transition font-medium text-slate-800" 
-                        placeholder="+91 9876543210"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Password */}
-                  <div>
-                    <label htmlFor="password" className="block text-xs font-bold text-slate-600 uppercase mb-2">Password</label>
-                    <div className="relative">
-                      <svg className="w-5 h-5 absolute left-4 top-3.5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5s-5 2.24-5 5v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1z" />
-                      </svg>
-                      <input 
-                        id="password"
-                        name="password"
-                        type="password" 
-                        className="w-full pl-12 pr-4 py-3 bg-white border-2 border-green-200 rounded-xl outline-none focus:border-green-500 transition font-medium text-slate-800" 
-                        placeholder="••••••••"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        required 
-                      />
-                    </div>
-                  </div>
-
-                  {/* Confirm Password */}
-                  <div>
-                    <label htmlFor="confirmPassword" className="block text-xs font-bold text-slate-600 uppercase mb-2">Confirm Password</label>
-                    <div className="relative">
-                      <svg className="w-5 h-5 absolute left-4 top-3.5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5s-5 2.24-5 5v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1z" />
-                      </svg>
-                      <input 
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        type="password" 
-                        className="w-full pl-12 pr-4 py-3 bg-white border-2 border-green-200 rounded-xl outline-none focus:border-green-500 transition font-medium text-slate-800" 
-                        placeholder="••••••••"
-                        value={formData.confirmPassword}
-                        onChange={handleInputChange}
-                        required 
-                      />
+                      <p className="text-xs text-blue-800">
+                        We'll send a verification code to your email. After verification, you'll create your password.
+                      </p>
                     </div>
                   </div>
 
@@ -320,10 +391,19 @@ export default function RegisterPageNew() {
                     disabled={loading}
                     className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl font-bold hover:from-green-700 hover:to-emerald-700 transition shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 disabled:opacity-50 mt-6"
                   >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                    </svg>
-                    {loading ? 'Creating Account...' : 'Create Account'}
+                    {loading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Sending OTP...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+                        </svg>
+                        Send Verification Code
+                      </>
+                    )}
                   </button>
                 </form>
 
