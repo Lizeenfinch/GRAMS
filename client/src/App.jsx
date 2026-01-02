@@ -24,6 +24,8 @@ import BudgetTransparencyPage from './pages/BudgetTransparencyPage';
 import TrackPage from './pages/TrackPage';
 import PerformancePage from './pages/PerformancePage';
 import StatusPage from './pages/StatusPage';
+import HelpPage from './pages/HelpPage';
+import ProfilePage from './pages/ProfilePage';
 import './index.css';
 
 function AnimatedRoutes() {
@@ -105,6 +107,14 @@ function AnimatedRoutes() {
           }
         />
         <Route
+          path="/help"
+          element={
+            <PageTransition>
+              <HelpPage />
+            </PageTransition>
+          }
+        />
+        <Route
           path="/login"
           element={
             <PageTransition>
@@ -158,6 +168,16 @@ function AnimatedRoutes() {
             <PrivateRoute>
               <PageTransition>
                 <DashboardPage />
+              </PageTransition>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <PrivateRoute>
+              <PageTransition>
+                <ProfilePage />
               </PageTransition>
             </PrivateRoute>
           }

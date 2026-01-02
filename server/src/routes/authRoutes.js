@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const upload = require('../middleware/upload');
 const {
   register,
   login,
@@ -17,12 +18,14 @@ const {
   verifyResetOTP,
   resetPassword,
   resendResetOTP,
+  updateProfile,
 } = require('../controllers/authController');
 
 router.post('/register', register);
 router.post('/login', login);
 router.post('/google-login', googleLogin);
 router.get('/me', auth, getMe);
+router.put('/update-profile', auth, upload.single('profileImage'), updateProfile);
 router.post('/logout', logout);
 
 // OTP routes for citizen login (phone)

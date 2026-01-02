@@ -37,8 +37,12 @@ export const getAllGrievances = async () => {
 
 // Get User Grievances
 export const getUserGrievances = async (token) => {
-  const toastId = toast.loading("Loading your grievances...")
   try {
+    if (!token) {
+      console.error('No token provided to getUserGrievances');
+      return [];
+    }
+
     const response = await apiconnector("GET", GET_USER_GRIEVANCES_API, null, {
       Authorization: `Bearer ${token}`,
     })
@@ -52,10 +56,12 @@ export const getUserGrievances = async (token) => {
     return response.data.data
   } catch (error) {
     console.log("GET USER GRIEVANCES API ERROR............", error)
-    toast.error("Could Not Fetch Your Grievances")
+    if (error.response?.status === 401) {
+      toast.error("Session expired. Please login again.");
+    } else {
+      toast.error("Could Not Fetch Your Grievances");
+    }
     return []
-  } finally {
-    toast.dismiss(toastId)
   }
 }
 

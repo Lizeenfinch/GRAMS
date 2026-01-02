@@ -5,8 +5,8 @@ import Footer from '../components/Footer';
 
 export default function TrackPage() {
   const [trackingId, setTrackingId] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [searchMethod, setSearchMethod] = useState('id'); // 'id' or 'phone'
+  const [email, setEmail] = useState('');
+  const [searchMethod, setSearchMethod] = useState('id'); // 'id' or 'email'
   const [grievance, setGrievance] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -56,10 +56,52 @@ export default function TrackPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
+    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-blue-50 to-purple-50 relative overflow-hidden">
+      {/* Animated Background Blobs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          animate={{
+            scale: [1, 1.2, 1],
+            x: [0, 50, 0],
+            y: [0, 30, 0],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+          className="absolute top-20 left-10 w-96 h-96 bg-cyan-300 rounded-full mix-blend-multiply filter blur-3xl opacity-50"
+        />
+        <motion.div
+          animate={{
+            scale: [1, 1.3, 1],
+            x: [0, -50, 0],
+            y: [0, -30, 0],
+          }}
+          transition={{
+            duration: 18,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+          className="absolute bottom-20 right-10 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-50"
+        />
+        <motion.div
+          animate={{
+            scale: [1, 1.15, 1],
+            rotate: [0, 180, 0],
+          }}
+          transition={{
+            duration: 15,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+          className="absolute top-1/2 left-1/2 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-50"
+        />
+      </div>
+      
       <Navbar />
       
-      <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
+      <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <motion.div
@@ -72,7 +114,7 @@ export default function TrackPage() {
               Track Your Grievance
             </h1>
             <p className="text-lg text-slate-600">
-              Enter your Tracking ID or Phone Number to check status
+              Enter your Tracking ID or Email to check status
             </p>
           </motion.div>
 
@@ -96,14 +138,14 @@ export default function TrackPage() {
                 🎫 Track by ID
               </button>
               <button
-                onClick={() => setSearchMethod('phone')}
+                onClick={() => setSearchMethod('email')}
                 className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-300 ${
-                  searchMethod === 'phone'
+                  searchMethod === 'email'
                     ? 'bg-green-600 text-white shadow-lg'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
-                📱 Track by Phone
+                📧 Track by Email
               </button>
             </div>
 
@@ -125,13 +167,13 @@ export default function TrackPage() {
               ) : (
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Phone Number
+                    Email Address
                   </label>
                   <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="Enter registered phone number"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter registered email address"
                     className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300"
                     required
                   />

@@ -71,6 +71,14 @@ exports.createGrievance = async (req, res) => {
   try {
     const { title, description, category, priority, location } = req.body;
     
+    // Fetch user to get email
+    const User = require('../models/User');
+    const user = await User.findById(req.user.id).select('email');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
     // Handle file uploads
     const attachments = [];
     
@@ -106,6 +114,7 @@ exports.createGrievance = async (req, res) => {
       location,
       attachments,
       userId: req.user.id,
+      userEmail: user.email,
     });
 
     await grievance.save();
@@ -447,5 +456,73 @@ exports.getTransparencyReport = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Request Grievance Cancellation
+exports.requestCancellation = async (req, res) => {
+  try {
+    const { grievanceId, reason } = req.body;
+    const userId = req.user.id;
+
+    if (!grievanceId || !reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Grievance ID and reason are required'
+      });
+    }
+
+    // Find the grievance
+    const grievance = await Grievance.findById(grievanceId);
+    
+    if (!grievance) {
+      return res.status(404).json({
+        success: false,
+        message: 'Grievance not found'
+      });
+    }
+
+    // Check if the user owns this grievance
+    if (grievance.userId.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only cancel your own grievances'
+      });
+    }
+
+    // Check if grievance can be cancelled
+    if (['resolved', 'rejected', 'cancelled'].includes(grievance.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot cancel a ${grievance.status} grievance`
+      });
+    }
+
+    // Add cancellation request to the grievance
+    if (!grievance.cancellationRequest) {
+      grievance.cancellationRequest = {};
+    }
+
+    grievance.cancellationRequest = {
+      requested: true,
+      reason: reason,
+      requestedAt: new Date(),
+      status: 'pending' // pending, approved, rejected
+    };
+
+    await grievance.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Cancellation request submitted successfully. It will be reviewed by an administrator.',
+      data: grievance
+    });
+  } catch (error) {
+    console.error('Request Cancellation Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit cancellation request',
+      error: error.message
+    });
   }
 };

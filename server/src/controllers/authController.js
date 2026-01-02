@@ -112,13 +112,84 @@ exports.login = async (req, res) => {
 // Get Current User
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).select('-password');
     res.status(200).json({
       success: true,
-      data: user,
+      user: user,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Update User Profile
+exports.updateProfile = async (req, res) => {
+  try {
+    const { name, email, phone } = req.body;
+    
+    // Find user
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Check if email is already taken by another user (only if email is being updated)
+    if (email && email !== user.email) {
+      const emailExists = await User.findOne({ email });
+      if (emailExists) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email already in use'
+        });
+      }
+      user.email = email;
+    }
+    
+    // Handle profile image upload
+    if (req.file) {
+      const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
+      
+      // Delete old image if exists
+      if (user.profileImage && user.profileImage.publicId) {
+        await deleteFromCloudinary(user.profileImage.publicId);
+      }
+      
+      // Upload new image
+      const result = await uploadToCloudinary(req.file.buffer, req.file.mimetype, 'profile-images');
+      user.profileImage = {
+        url: result.secure_url,
+        publicId: result.public_id
+      };
+    }
+    
+    // Update only provided fields
+    if (name !== undefined && name.trim()) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+    
+    await user.save();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        profileImage: user.profileImage,
+        createdAt: user.createdAt
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 

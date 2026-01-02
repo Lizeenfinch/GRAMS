@@ -165,6 +165,38 @@ const grievanceSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    cancellationRequest: {
+      requested: {
+        type: Boolean,
+        default: false,
+      },
+      reason: {
+        type: String,
+        required: false,
+      },
+      requestedAt: {
+        type: Date,
+        required: false,
+      },
+      status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        required: false,
+      },
+      reviewedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: false,
+      },
+      reviewedAt: {
+        type: Date,
+        required: false,
+      },
+      reviewNotes: {
+        type: String,
+        required: false,
+      },
+    },
   },
   {
     timestamps: true,

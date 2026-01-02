@@ -12,9 +12,11 @@ const {
   deleteGrievance,
   addComment,
   upvoteGrievance,
+  requestCancellation,
 } = require('../controllers/grievanceController');
 
 router.get('/', auth, getUserGrievances);
+router.get('/my-grievances', auth, getUserGrievances);
 router.get('/all', getAllGrievances);
 router.get('/transparency', getTransparencyReport);
 router.get('/:id', auth, getGrievanceById);
@@ -23,5 +25,6 @@ router.put('/:id', auth, updateGrievance);
 router.delete('/:id', auth, deleteGrievance);
 router.post('/:id/comment', auth, addComment);
 router.post('/:id/upvote', auth, upvoteGrievance);
+router.post('/request-cancellation', auth, requestCancellation);
 
 module.exports = router;

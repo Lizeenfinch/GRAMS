@@ -41,6 +41,16 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    profileImage: {
+      url: {
+        type: String,
+        required: false,
+      },
+      publicId: {
+        type: String,
+        required: false,
+      }
+    },
     // Google OAuth fields
     googleId: {
       type: String,

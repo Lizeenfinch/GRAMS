@@ -8,6 +8,7 @@ const {
   LOGIN_API,
   LOGOUT_API,
   GET_ME_API,
+  UPDATE_PROFILE_API,
   SEND_OTP_API,
   VERIFY_OTP_API,
   GOOGLE_LOGIN_API,
@@ -70,6 +71,102 @@ export const login = async (credentials, navigate) => {
     toast.error(error?.response?.data?.message || "Login Failed")
   } finally {
     toast.dismiss(toastId)
+  }
+}
+
+// Get User Profile
+export const getUserProfile = async (token) => {
+  try {
+    const response = await apiconnector("GET", GET_ME_API, null, {
+      Authorization: `Bearer ${token}`
+    })
+    
+    if (!response.data.success) {
+      throw new Error(response.data.message)
+    }
+    
+    return response.data.user
+  } catch (error) {
+    console.log("GET USER PROFILE ERROR............", error)
+    if (error.response?.status === 401) {
+      toast.error("Session expired. Please login again.");
+    }
+    throw error
+  }
+}
+
+// Update User Profile
+export const updateUserProfile = async (profileData, token) => {
+  const toastId = toast.loading("Updating profile...")
+  try {
+    const formData = new FormData();
+    
+    // Append text fields
+    if (profileData.name) formData.append('name', profileData.name);
+    if (profileData.email) formData.append('email', profileData.email);
+    if (profileData.phone) formData.append('phone', profileData.phone);
+    
+    // Append image if exists
+    if (profileData.profileImage) {
+      formData.append('profileImage', profileData.profileImage);
+    }
+    
+    const response = await apiconnector("PUT", UPDATE_PROFILE_API, formData, {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'multipart/form-data'
+    })
+    
+    if (!response.data.success) {
+      throw new Error(response.data.message)
+    }
+    
+    toast.success("Profile updated successfully!")
+    return response.data
+  } catch (error) {
+    console.log("UPDATE PROFILE ERROR............", error)
+    toast.error(error?.response?.data?.message || "Failed to update profile")
+    throw error
+  } finally {
+    toast.dismiss(toastId)
+  }
+}
+
+// Get User Grievances
+export const getUserGrievances = async (token) => {
+  try {
+    const response = await apiconnector("GET", `${import.meta.env.VITE_BASE_URL}/grievances/my-grievances`, null, {
+      Authorization: `Bearer ${token}`
+    })
+    
+    if (!response.data.success) {
+      throw new Error(response.data.message)
+    }
+    
+    return response.data.grievances
+  } catch (error) {
+    console.log("GET USER GRIEVANCES ERROR............", error)
+    throw error
+  }
+}
+
+// Request Grievance Cancellation
+export const requestGrievanceCancellation = async (cancelData, token) => {
+  const toastId = toast.loading("Submitting cancellation request...")
+  try {
+    const response = await apiconnector("POST", `${import.meta.env.VITE_BASE_URL}/grievances/request-cancellation`, cancelData, {
+      Authorization: `Bearer ${token}`
+    })
+    
+    if (!response.data.success) {
+      throw new Error(response.data.message)
+    }
+    
+    toast.dismiss(toastId)
+    return response.data
+  } catch (error) {
+    console.log("REQUEST CANCELLATION ERROR............", error)
+    toast.dismiss(toastId)
+    throw error
   }
 }
 

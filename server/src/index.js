@@ -28,9 +28,10 @@ const app = express();
 connectDB();
 
 // Middleware
-app.use(cors(
-  origin=true
-));
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

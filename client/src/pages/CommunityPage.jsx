@@ -167,24 +167,30 @@ export default function CommunityPage() {
   }, [grievances]);
 
   const ease = [0.22, 1, 0.36, 1];
-  const fade = shouldReduceMotion ? { duration: 0 } : { duration: 0.55, ease };
-  const fadeFast = shouldReduceMotion ? { duration: 0 } : { duration: 0.35, ease };
+  const fade = shouldReduceMotion ? { duration: 0 } : { duration: 0.3, ease };
+  const fadeFast = shouldReduceMotion ? { duration: 0 } : { duration: 0.2, ease };
 
   return (
-    <section id="community" className="page-enter bg-slate-50 min-h-screen">
+    <section id="community" className="page-enter bg-gradient-to-br from-purple-100 via-indigo-100 to-violet-100 min-h-screen">
       {/* Hero Header */}
-      <div className="bg-gradient-to-br from-orange-50 to-amber-50 py-12 mt-16">
+      <div className="bg-gradient-to-br from-purple-600 via-indigo-600 to-violet-600 py-12 mt-10 relative overflow-hidden">
+        {/* Animated background blobs */}
+        <div className="absolute inset-0 opacity-50">
+          <div className="absolute top-10 right-10 w-96 h-96 bg-violet-300 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-10 left-10 w-80 h-80 bg-fuchsia-300 rounded-full blur-3xl animate-pulse" style={{animationDelay: '0.5s'}}></div>
+          <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-indigo-300 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+        </div>
         <motion.div
-          className="max-w-5xl mx-auto px-6 text-center"
+          className="max-w-5xl mx-auto px-6 md:px-12 text-center relative z-10"
           initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={fade}
         >
-          <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold uppercase">
-            Neighborhood Watch
+          <span className="bg-white/20 backdrop-blur-md text-white border border-white/40 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide shadow-lg animate-bounce">
+            ● Neighborhood Watch
           </span>
-          <h1 className="text-4xl font-extrabold text-slate-900 mt-4">Nearby Issues</h1>
-          <p className="text-slate-600 mt-3 max-w-2xl mx-auto">
+          <h1 className="text-4xl lg:text-5xl font-extrabold text-white mt-4 drop-shadow-2xl">Nearby Issues</h1>
+          <p className="text-white/90 mt-3 max-w-2xl mx-auto leading-relaxed">
             Don&apos;t file duplicate complaints. Upvote existing ones to prioritize them. Community support makes issues
             get resolved faster.
           </p>
@@ -192,25 +198,25 @@ export default function CommunityPage() {
       </div>
 
       {/* Stats Bar */}
-      <div className="max-w-5xl mx-auto px-6 -mt-6 mb-8">
+      <div className="max-w-5xl mx-auto px-6 md:px-12 -mt-6 mb-8">
         <motion.div
           initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.55, ease, delay: 0.08 }}
+          transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.3, ease }}
         >
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
+          <div className="bg-gradient-to-br from-white to-purple-50 rounded-2xl shadow-2xl border-2 border-purple-200 p-6 hover:shadow-purple-300 transition-all duration-200">
             <div className="grid grid-cols-3 gap-6 text-center">
-              <div>
-                <p className="text-2xl font-extrabold text-orange-600">{stats.activeNearby}</p>
-                <p className="text-xs font-bold text-slate-500 uppercase mt-1">Active Nearby</p>
+              <div className="hover:scale-105 transition-transform">
+                <p className="text-3xl font-extrabold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent drop-shadow-lg">{stats.activeNearby}</p>
+                <p className="text-xs font-bold text-slate-600 uppercase mt-1 tracking-wide">Active Nearby</p>
               </div>
-              <div className="border-l border-r border-slate-200">
-                <p className="text-2xl font-extrabold text-green-600">{stats.resolvedToday}</p>
-                <p className="text-xs font-bold text-slate-500 uppercase mt-1">Resolved Today</p>
+              <div className="border-l-2 border-r-2 border-purple-200 hover:scale-105 transition-transform">
+                <p className="text-3xl font-extrabold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent drop-shadow-lg">{stats.resolvedToday}</p>
+                <p className="text-xs font-bold text-slate-600 uppercase mt-1 tracking-wide">Resolved Today</p>
               </div>
-              <div>
-                <p className="text-2xl font-extrabold text-slate-900">{grievances.length}</p>
-                <p className="text-xs font-bold text-slate-500 uppercase mt-1">Total Issues</p>
+              <div className="hover:scale-105 transition-transform">
+                <p className="text-3xl font-extrabold bg-gradient-to-r from-slate-700 to-slate-900 bg-clip-text text-transparent drop-shadow-lg">{grievances.length}</p>
+                <p className="text-xs font-bold text-slate-600 uppercase mt-1 tracking-wide">Total Issues</p>
               </div>
             </div>
           </div>
@@ -218,12 +224,12 @@ export default function CommunityPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="max-w-5xl mx-auto px-6 mb-6">
+      <div className="max-w-5xl mx-auto px-6 md:px-12 mb-6">
         <motion.div
-          className="flex gap-2 overflow-x-auto pb-2"
+          className="flex gap-3 overflow-x-auto pb-2"
           initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.55, ease, delay: 0.14 }}
+          transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.3, ease }}
         >
           {filters.map((filter) => {
             const isActive = activeFilter === filter.key;
@@ -232,17 +238,27 @@ export default function CommunityPage() {
                 key={filter.key}
                 type="button"
                 onClick={() => setActiveFilter(filter.key)}
-                whileTap={shouldReduceMotion ? undefined : { opacity: 0.9 }}
-                className="relative px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border border-slate-200 overflow-hidden"
+                whileTap={shouldReduceMotion ? undefined : { scale: 0.95 }}
+                whileHover={shouldReduceMotion ? undefined : { scale: 1.05 }}
+                className="relative px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap border-2 overflow-hidden shadow-md hover:shadow-lg transition-shadow"
               >
                 <motion.span
-                  className="absolute inset-0 bg-slate-900"
+                  className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600"
                   aria-hidden="true"
                   initial={false}
                   animate={{ opacity: isActive ? 1 : 0 }}
                   transition={fadeFast}
                 />
-                <span className={`relative z-10 ${isActive ? 'text-white' : 'text-slate-600'}`}>{filter.label}</span>
+                <motion.span
+                  className="absolute inset-0 border-2"
+                  aria-hidden="true"
+                  initial={false}
+                  animate={{ 
+                    borderColor: isActive ? 'rgba(147, 51, 234, 0.5)' : 'rgba(226, 232, 240, 1)'
+                  }}
+                  transition={fadeFast}
+                />
+                <span className={`relative z-10 ${isActive ? 'text-white drop-shadow-md' : 'text-slate-700'}`}>{filter.label}</span>
               </motion.button>
             );
           })}
@@ -250,20 +266,21 @@ export default function CommunityPage() {
       </div>
 
       {/* Issue Cards */}
-      <div className="max-w-5xl mx-auto px-6 pb-16">
+      <div className="max-w-5xl mx-auto px-6 md:px-12 pb-16">
         {loading && (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
-            <p className="mt-4 text-slate-600 font-semibold">Loading community issues...</p>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-t-purple-600 shadow-lg"></div>
+            <p className="mt-4 text-slate-700 font-bold">Loading community issues...</p>
           </div>
         )}
         
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-            <p className="text-red-700 font-semibold">{error}</p>
+          <div className="bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-300 rounded-2xl p-8 text-center shadow-xl">
+            <span className="text-5xl mb-3 block">⚠️</span>
+            <p className="text-red-700 font-bold text-lg">{error}</p>
             <button
               onClick={fetchGrievances}
-              className="mt-4 bg-red-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-red-700 transition"
+              className="mt-5 bg-gradient-to-r from-red-600 to-red-700 text-white px-8 py-3 rounded-xl font-bold hover:shadow-2xl hover:scale-105 transition-all duration-300 shadow-lg"
             >
               Retry
             </button>
@@ -271,10 +288,10 @@ export default function CommunityPage() {
         )}
         
         {!loading && !error && visibleIssues.length === 0 && (
-          <div className="bg-slate-100 rounded-xl p-12 text-center">
-            <span className="text-6xl mb-4 block">📋</span>
-            <p className="text-slate-600 font-semibold text-lg">No issues found in this category</p>
-            <p className="text-slate-500 text-sm mt-2">Try selecting a different filter</p>
+          <div className="bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl p-12 text-center shadow-lg">
+            <span className="text-6xl mb-4 block animate-bounce">📋</span>
+            <p className="text-slate-700 font-bold text-xl">No issues found in this category</p>
+            <p className="text-slate-600 text-sm mt-2">Try selecting a different filter</p>
           </div>
         )}
         
@@ -288,26 +305,26 @@ export default function CommunityPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={fade}
-                className={`bg-white p-6 rounded-2xl shadow-sm ${issue.border} hover:shadow-lg transition`}
+                className={`bg-gradient-to-br from-white to-slate-50 p-6 rounded-2xl shadow-xl ${issue.border} hover:shadow-2xl hover:scale-105 hover:-rotate-1 transition-all duration-200 transform`}
               >
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 ${issue.iconBg} rounded-xl flex items-center justify-center`}>
+                  <div className={`w-12 h-12 ${issue.iconBg} rounded-xl flex items-center justify-center shadow-lg hover:scale-110 hover:rotate-12 transition-transform`}>
                     <span className={`material-symbols-rounded ${issue.iconText}`} aria-hidden="true">
                       {issue.icon}
                     </span>
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900">{issue.title}</h4>
-                    <p className="text-xs text-slate-500">{issue.location}</p>
+                    <h4 className="font-bold text-slate-900 drop-shadow-sm">{issue.title}</h4>
+                    <p className="text-xs text-slate-500 font-medium">{issue.location}</p>
                   </div>
                 </div>
                 {issue.chip && (
-                  <span className={`${issue.chip.className} px-3 py-1 rounded-full text-xs font-bold`}>{issue.chip.text}</span>
+                  <span className={`${issue.chip.className} px-3 py-1.5 rounded-full text-xs font-bold border-2 border-red-300 shadow-md animate-pulse`}>{issue.chip.text}</span>
                 )}
               </div>
-              <p className="text-sm text-slate-600 mb-4">{issue.description}</p>
-              <div className="flex items-center justify-between border-t pt-4">
+              <p className="text-sm text-slate-700 mb-4 leading-relaxed font-medium">{issue.description}</p>
+              <div className="flex items-center justify-between border-t-2 border-slate-200 pt-4">
                 <motion.button
                   type="button"
                   onClick={() => handleUpvote(issue.id)}
@@ -339,7 +356,7 @@ export default function CommunityPage() {
                     {issue.upvotes} Upvotes
                   </motion.span>
                 </motion.button>
-                <p className="text-xs text-slate-400 font-semibold">{issue.filed}</p>
+                <p className="text-xs text-slate-500 font-bold">🕒 {issue.filed}</p>
               </div>
               </motion.div>
             ))}
@@ -349,8 +366,13 @@ export default function CommunityPage() {
       </div>
 
       {/* Community Guidelines */}
-      <div className="bg-slate-900 py-12">
-        <div className="max-w-5xl mx-auto px-6">
+      <div className="bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900 py-12 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-40">
+          <div className="absolute top-10 right-10 w-96 h-96 bg-purple-500 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-10 left-10 w-80 h-80 bg-indigo-500 rounded-full blur-3xl animate-pulse" style={{animationDelay: '0.5s'}}></div>
+          <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-violet-500 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+        </div>
+        <div className="max-w-5xl mx-auto px-6 md:px-12 relative z-10">
           <motion.div
             className="text-center mb-8"
             initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
@@ -358,26 +380,26 @@ export default function CommunityPage() {
             viewport={{ once: true, amount: 0.2 }}
             transition={fade}
           >
-            <span className="bg-white/20 text-white px-3 py-1 rounded-full text-xs font-bold uppercase">
-              Guidelines
+            <span className="bg-white/20 backdrop-blur-md text-white border border-white/40 px-4 py-2 rounded-full text-xs font-bold uppercase shadow-lg">
+              ✨ Guidelines
             </span>
-            <h3 className="text-2xl font-extrabold text-white mt-3">How to Use Neighborhood Watch</h3>
+            <h3 className="text-3xl lg:text-4xl font-extrabold text-white mt-4 drop-shadow-2xl">How to Use Neighborhood Watch</h3>
           </motion.div>
           <div className="grid md:grid-cols-3 gap-6">
             <motion.div
               initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true, amount: 0.2 }}
-              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.55, ease, delay: 0.06 }}
-              className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 text-center"
+              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.3, ease }}
+              className="bg-white/10 backdrop-blur-lg border-2 border-white/30 rounded-2xl p-6 text-center hover:bg-white/20 hover:scale-105 hover:-rotate-2 transition-all duration-200 transform shadow-xl hover:shadow-2xl"
             >
-                <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl hover:scale-110 hover:rotate-12 transition-transform duration-200">
                   <span className="material-symbols-rounded text-white text-2xl" aria-hidden="true">
                     search
                   </span>
                 </div>
-                <h4 className="font-bold text-white mb-2">Search First</h4>
-                <p className="text-sm text-slate-300">
+                <h4 className="font-bold text-white mb-2 text-lg drop-shadow-md">Search First</h4>
+                <p className="text-sm text-slate-200 leading-relaxed">
                   Before filing a new complaint, check if someone already reported the same issue nearby.
                 </p>
             </motion.div>
@@ -386,15 +408,15 @@ export default function CommunityPage() {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true, amount: 0.2 }}
               transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.55, ease, delay: 0.1 }}
-              className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 text-center"
+              className="bg-white/10 backdrop-blur-lg border-2 border-white/30 rounded-2xl p-6 text-center hover:bg-white/20 hover:scale-105 transition-all duration-300 transform shadow-xl hover:shadow-2xl"
             >
-                <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl hover:scale-110 hover:rotate-12 transition-transform">
                   <span className="material-symbols-rounded text-white text-2xl" aria-hidden="true">
                     thumb_up
                   </span>
                 </div>
-                <h4 className="font-bold text-white mb-2">Upvote Instead</h4>
-                <p className="text-sm text-slate-300">
+                <h4 className="font-bold text-white mb-2 text-lg drop-shadow-md">Upvote Instead</h4>
+                <p className="text-sm text-slate-200 leading-relaxed">
                   If you find a matching issue, upvote it. More upvotes = higher priority for authorities.
                 </p>
             </motion.div>
@@ -403,15 +425,15 @@ export default function CommunityPage() {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true, amount: 0.2 }}
               transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.55, ease, delay: 0.14 }}
-              className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 text-center"
+              className="bg-white/10 backdrop-blur-lg border-2 border-white/30 rounded-2xl p-6 text-center hover:bg-white/20 hover:scale-105 hover:rotate-2 transition-all duration-300 transform shadow-xl hover:shadow-2xl"
             >
-                <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl hover:scale-110 hover:rotate-12 transition-transform">
                   <span className="material-symbols-rounded text-white text-2xl" aria-hidden="true">
                     groups
                   </span>
                 </div>
-                <h4 className="font-bold text-white mb-2">Build Pressure</h4>
-                <p className="text-sm text-slate-300">
+                <h4 className="font-bold text-white mb-2 text-lg drop-shadow-md">Build Pressure</h4>
+                <p className="text-sm text-slate-200 leading-relaxed">
                   Community support speeds up resolution. Share with neighbors to gather more upvotes.
                 </p>
             </motion.div>

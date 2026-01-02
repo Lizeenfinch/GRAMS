@@ -1,17 +1,39 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Reveal from '../components/Reveal';
 import MotionImage from '../components/MotionImage';
 import { createGrievance } from '../Services/operations/grievanceAPI';
+import useAuthStore from '../store/authStore';
 
 export default function GrievanceFormPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromDashboard = location.state?.fromDashboard;
   const isDev = import.meta?.env?.DEV;
+  const user = useAuthStore((state) => state.user);
+  
+  // Get user data from localStorage if not in store
+  const getUserData = () => {
+    if (user) return user;
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        return JSON.parse(storedUser);
+      } catch (error) {
+        console.error('Error parsing user from localStorage:', error);
+        return null;
+      }
+    }
+    return null;
+  };
+
+  const userData = getUserData();
+  
   const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    email: '',
+    name: userData?.name || '',
+    phone: userData?.phone || '',
+    email: userData?.email || '',
     address: '',
     category: '',
     otherCategory: '',
@@ -389,9 +411,19 @@ export default function GrievanceFormPage() {
                   <p className="text-xs text-slate-500">Fields marked with * are required</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                <span className="text-xs font-bold text-slate-500">Ready</span>
+              <div className="flex items-center gap-3">
+                {fromDashboard && (
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="flex items-center gap-2 bg-slate-600 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition font-semibold text-sm"
+                  >
+                    <span>←</span> Back to Dashboard
+                  </button>
+                )}
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                  <span className="text-xs font-bold text-slate-500">Ready</span>
+                </div>
               </div>
             </div>
             

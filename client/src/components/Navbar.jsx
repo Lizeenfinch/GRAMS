@@ -44,7 +44,6 @@ export default function Navbar() {
     if (isActive('/community')) return 'community';
     if (isActive('/track')) return 'track';
     if (isActive('/performance')) return 'performance';
-    if (isActive('/status')) return 'status';
     return null;
   }, [location.pathname]);
 
@@ -284,43 +283,13 @@ export default function Navbar() {
               whileTap="tap"
             >
               <Link
-                to="/status"
-                onMouseEnter={() => setHoveredLink('status')}
+                to="/help"
+                onMouseEnter={() => setHoveredLink('help')}
                 onMouseLeave={() => setHoveredLink(null)}
                 onClick={handleNavClick}
                 className={`top-nav-link px-3 py-2 rounded-lg text-slate-700 font-medium flex items-center gap-2 transition-all duration-300 ease-out hover:bg-green-50 hover:text-green-600 relative group text-xs ${
-                  isActive('/status') ? 'bg-green-100 text-green-700 shadow-sm' : ''
+                  isActive('/help') ? 'bg-green-100 text-green-700 shadow-sm' : ''
                 }`}
-              >
-                <motion.svg 
-                  variants={iconVariants}
-                  className="w-5 h-5" 
-                  fill="currentColor" 
-                  viewBox="0 0 20 20"
-                >
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </motion.svg>
-                <span className="hidden xl:inline text-sm">Status</span>
-                {underlineTarget === 'status' && (
-                  <motion.span
-                    layoutId="nav-underline"
-                    className="absolute -bottom-1 left-3 right-3 h-0.5 bg-green-600 rounded-full shadow-sm"
-                    transition={underlineTransition}
-                  />
-                )}
-              </Link>
-            </motion.div>
-
-            <motion.div
-              variants={navItemVariants}
-              initial="rest"
-              whileHover="hover"
-              whileTap="tap"
-            >
-              <button 
-                onMouseEnter={() => setHoveredLink('help')}
-                onMouseLeave={() => setHoveredLink(null)}
-                className="top-nav-link px-3 py-2 rounded-lg text-slate-700 font-medium flex items-center gap-2 transition-all duration-300 ease-out hover:bg-green-50 hover:text-green-600 relative group"
               >
                 <motion.svg 
                   variants={iconVariants}
@@ -331,7 +300,14 @@ export default function Navbar() {
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </motion.svg>
                 <span className="hidden xl:inline text-sm">Help</span>
-              </button>
+                {underlineTarget === 'help' && (
+                  <motion.span
+                    layoutId="nav-underline"
+                    className="absolute -bottom-1 left-3 right-3 h-0.5 bg-green-600 rounded-full shadow-sm"
+                    transition={underlineTransition}
+                  />
+                )}
+              </Link>
             </motion.div>
           </div>
         </div>
@@ -403,20 +379,7 @@ export default function Navbar() {
                   className="block w-full text-left px-4 py-2.5 hover:bg-green-50 rounded-lg text-sm text-slate-700 font-semibold transition-all duration-200 hover:text-green-600 hover:translate-x-1 relative group"
                   onClick={() => setActiveDropdown(false)}
                 >
-                  👤 My Profile
-                  <motion.span 
-                    className="absolute bottom-0 left-0 h-0.5 bg-green-500 rounded-full"
-                    initial={{ width: 0 }}
-                    whileHover={{ width: "100%" }}
-                    transition={{ duration: 0.3 }}
-                  />
-                </Link>
-                <Link 
-                  to="/settings" 
-                  className="block w-full text-left px-4 py-2.5 hover:bg-green-50 rounded-lg text-sm text-slate-700 font-semibold transition-all duration-200 hover:text-green-600 hover:translate-x-1 relative group"
-                  onClick={() => setActiveDropdown(false)}
-                >
-                  ⚙️ Settings
+                  📊 Dashboard
                   <motion.span 
                     className="absolute bottom-0 left-0 h-0.5 bg-green-500 rounded-full"
                     initial={{ width: 0 }}
