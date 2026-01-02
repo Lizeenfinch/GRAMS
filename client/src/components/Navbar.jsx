@@ -28,7 +28,7 @@ export default function Navbar() {
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate('/login');
     setActiveDropdown(false);
   };
 
@@ -399,7 +399,7 @@ export default function Navbar() {
                 style={{ pointerEvents: activeDropdown ? 'auto' : 'none' }}
               >
                 <Link 
-                  to="/profile" 
+                  to="/dashboard" 
                   className="block w-full text-left px-4 py-2.5 hover:bg-green-50 rounded-lg text-sm text-slate-700 font-semibold transition-all duration-200 hover:text-green-600 hover:translate-x-1 relative group"
                   onClick={() => setActiveDropdown(false)}
                 >

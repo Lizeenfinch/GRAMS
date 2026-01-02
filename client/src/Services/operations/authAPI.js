@@ -15,6 +15,10 @@ const {
   VERIFY_EMAIL_OTP_API,
   COMPLETE_REGISTRATION_API,
   RESEND_EMAIL_OTP_API,
+  FORGOT_PASSWORD_API,
+  VERIFY_RESET_OTP_API,
+  RESET_PASSWORD_API,
+  RESEND_RESET_OTP_API,
 } = authEndpoints
 
 
@@ -308,6 +312,95 @@ export const resendEmailOTP = async (email, name) => {
     return response.data
   } catch (error) {
     console.log("RESEND EMAIL OTP API ERROR............", error)
+    const errorMessage = error?.response?.data?.message || "Failed to resend OTP"
+    throw new Error(errorMessage)
+  }
+}
+
+// Forgot Password
+export const forgotPassword = async (email) => {
+  const toastId = toast.loading("Sending password reset email...")
+  try {
+    const response = await apiconnector("POST", FORGOT_PASSWORD_API, { email })
+    
+    console.log("FORGOT PASSWORD API RESPONSE............", response)
+
+    if (!response.data.success) {
+      throw new Error(response.data.message)
+    }
+
+    toast.success("Password reset OTP sent to your email!")
+    return response.data
+  } catch (error) {
+    console.log("FORGOT PASSWORD API ERROR............", error)
+    const errorMessage = error?.response?.data?.message || "Failed to send reset email"
+    toast.error(errorMessage)
+    throw new Error(errorMessage)
+  } finally {
+    toast.dismiss(toastId)
+  }
+}
+
+// Verify Reset OTP
+export const verifyResetOTP = async (email, otp) => {
+  try {
+    const response = await apiconnector("POST", VERIFY_RESET_OTP_API, { email, otp })
+    
+    console.log("VERIFY RESET OTP API RESPONSE............", response)
+
+    if (!response.data.success) {
+      throw new Error(response.data.message)
+    }
+
+    toast.success("OTP verified successfully!")
+    return response.data
+  } catch (error) {
+    console.log("VERIFY RESET OTP API ERROR............", error)
+    const errorMessage = error?.response?.data?.message || "Invalid OTP"
+    toast.error(errorMessage)
+    throw new Error(errorMessage)
+  }
+}
+
+// Reset Password
+export const resetPassword = async (email, password, navigate) => {
+  const toastId = toast.loading("Resetting password...")
+  try {
+    const response = await apiconnector("POST", RESET_PASSWORD_API, { email, password })
+    
+    console.log("RESET PASSWORD API RESPONSE............", response)
+
+    if (!response.data.success) {
+      throw new Error(response.data.message)
+    }
+
+    toast.success("Password reset successfully! Please login.")
+    navigate("/login")
+    return response.data
+  } catch (error) {
+    console.log("RESET PASSWORD API ERROR............", error)
+    const errorMessage = error?.response?.data?.message || "Failed to reset password"
+    toast.error(errorMessage)
+    throw new Error(errorMessage)
+  } finally {
+    toast.dismiss(toastId)
+  }
+}
+
+// Resend Reset OTP
+export const resendResetOTP = async (email) => {
+  try {
+    const response = await apiconnector("POST", RESEND_RESET_OTP_API, { email })
+    
+    console.log("RESEND RESET OTP API RESPONSE............", response)
+
+    if (!response.data.success) {
+      throw new Error(response.data.message)
+    }
+
+    return response.data
+  } catch (error) {
+    console.log("RESEND RESET OTP API ERROR............", error)
     const errorMessage = error?.response?.data?.message || "Failed to resend OTP"
     throw new Error(errorMessage)
   }

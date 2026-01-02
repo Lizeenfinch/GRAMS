@@ -14,6 +14,11 @@ export const authEndpoints = {
   VERIFY_EMAIL_OTP_API: BASE_URL + "/auth/verify-email-otp",
   COMPLETE_REGISTRATION_API: BASE_URL + "/auth/complete-registration",
   RESEND_EMAIL_OTP_API: BASE_URL + "/auth/resend-email-otp",
+  // Forgot Password Endpoints
+  FORGOT_PASSWORD_API: BASE_URL + "/auth/forgot-password",
+  VERIFY_RESET_OTP_API: BASE_URL + "/auth/verify-reset-otp",
+  RESET_PASSWORD_API: BASE_URL + "/auth/reset-password",
+  RESEND_RESET_OTP_API: BASE_URL + "/auth/resend-reset-otp",
 }
 
 // GRIEVANCE ENDPOINTS

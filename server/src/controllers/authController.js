@@ -63,19 +63,30 @@ exports.login = async (req, res) => {
 
     // Validate email & password
     if (!email || !password) {
-      return res.status(400).json({ message: 'Please provide email and password' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Please provide email and password' 
+      });
     }
 
     // Check for user
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(404).json({ 
+        success: false,
+        message: 'No account found with this email. Please sign up first.',
+        errorType: 'USER_NOT_FOUND'
+      });
     }
 
     // Check if password matches
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ 
+        success: false,
+        message: 'Incorrect password. Please try again or reset your password.',
+        errorType: 'INVALID_PASSWORD'
+      });
     }
 
     const token = generateToken(user._id);
@@ -91,7 +102,10 @@ exports.login = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 
@@ -592,6 +606,271 @@ exports.resendEmailOTP = async (req, res) => {
 
   } catch (error) {
     console.error('Resend email OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to resend OTP. Please try again.'
+    });
+  }
+};
+
+// Forgot Password - Send OTP
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'No account found with this email address'
+      });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store OTP with expiry (10 minutes)
+    emailOtpStore.set(email, {
+      otp,
+      name: user.name,
+      type: 'password-reset',
+      createdAt: Date.now(),
+      expiresIn: 10 * 60 * 1000, // 10 minutes
+      attempts: 0,
+      verified: false
+    });
+
+    // Send OTP via email
+    const passwordResetTemplate = require('../mail/mailtemplates/passwordResetTemplate');
+    const emailBody = passwordResetTemplate(otp, user.name);
+    const mailResult = await mailsender(
+      email,
+      'Password Reset Request - GRAMS',
+      emailBody
+    );
+
+    if (!mailResult) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send password reset email. Please try again.'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset OTP sent to your email',
+      email: email,
+      // Remove in production
+      demoOTP: process.env.NODE_ENV === 'development' ? otp : undefined
+    });
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process password reset request. Please try again.'
+    });
+  }
+};
+
+// Verify Password Reset OTP
+exports.verifyResetOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and OTP are required'
+      });
+    }
+
+    // Get stored OTP data
+    const otpData = emailOtpStore.get(email);
+
+    if (!otpData || otpData.type !== 'password-reset') {
+      return res.status(400).json({
+        success: false,
+        message: 'OTP expired or not found. Please request a new OTP.'
+      });
+    }
+
+    // Check expiry
+    if (Date.now() - otpData.createdAt > otpData.expiresIn) {
+      emailOtpStore.delete(email);
+      return res.status(400).json({
+        success: false,
+        message: 'OTP has expired. Please request a new OTP.'
+      });
+    }
+
+    // Check attempts
+    if (otpData.attempts >= 3) {
+      emailOtpStore.delete(email);
+      return res.status(400).json({
+        success: false,
+        message: 'Too many failed attempts. Please request a new OTP.'
+      });
+    }
+
+    // Verify OTP
+    if (otpData.otp !== otp) {
+      otpData.attempts += 1;
+      emailOtpStore.set(email, otpData);
+      return res.status(400).json({
+        success: false,
+        message: `Invalid OTP. ${3 - otpData.attempts} attempts remaining.`
+      });
+    }
+
+    // Mark as verified
+    otpData.verified = true;
+    emailOtpStore.set(email, otpData);
+
+    res.status(200).json({
+      success: true,
+      message: 'OTP verified successfully',
+      email: email
+    });
+
+  } catch (error) {
+    console.error('Verify reset OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'OTP verification failed. Please try again.'
+    });
+  }
+};
+
+// Reset Password
+exports.resetPassword = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and new password are required'
+      });
+    }
+
+    // Check if OTP was verified
+    const otpData = emailOtpStore.get(email);
+    if (!otpData || !otpData.verified || otpData.type !== 'password-reset') {
+      return res.status(400).json({
+        success: false,
+        message: 'Please verify OTP first'
+      });
+    }
+
+    // Find user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update password
+    user.password = password;
+    await user.save();
+
+    // Clear OTP data
+    emailOtpStore.delete(email);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully. Please login with your new password.'
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reset password. Please try again.'
+    });
+  }
+};
+
+// Resend Password Reset OTP
+exports.resendResetOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'No account found with this email address'
+      });
+    }
+
+    // Check cooldown (1 minute)
+    const existingOtp = emailOtpStore.get(email);
+    if (existingOtp && Date.now() - existingOtp.createdAt < 60000) {
+      const remainingTime = Math.ceil((60000 - (Date.now() - existingOtp.createdAt)) / 1000);
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${remainingTime} seconds before requesting a new OTP`
+      });
+    }
+
+    // Generate new OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store new OTP
+    emailOtpStore.set(email, {
+      otp,
+      name: user.name,
+      type: 'password-reset',
+      createdAt: Date.now(),
+      expiresIn: 10 * 60 * 1000,
+      attempts: 0,
+      verified: false
+    });
+
+    // Send OTP via email
+    const passwordResetTemplate = require('../mail/mailtemplates/passwordResetTemplate');
+    const emailBody = passwordResetTemplate(otp, user.name);
+    const mailResult = await mailsender(
+      email,
+      'Password Reset Request - GRAMS',
+      emailBody
+    );
+
+    if (!mailResult) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send password reset email. Please try again.'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'New OTP sent successfully',
+      email: email,
+      demoOTP: process.env.NODE_ENV === 'development' ? otp : undefined
+    });
+
+  } catch (error) {
+    console.error('Resend reset OTP error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to resend OTP. Please try again.'

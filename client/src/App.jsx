@@ -12,6 +12,8 @@ import LoginPageNew from './pages/LoginPageNew';
 import RegisterPageNew from './pages/RegisterPageNew';
 import OTPVerificationPage from './pages/OTPVerificationPage';
 import CompleteRegistrationPage from './pages/CompleteRegistrationPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
 import TransparencyPage from './pages/TransparencyPage';
@@ -131,6 +133,22 @@ function AnimatedRoutes() {
           element={
             <PageTransition>
               <CompleteRegistrationPage />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <PageTransition>
+              <ForgotPasswordPage />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <PageTransition>
+              <ResetPasswordPage />
             </PageTransition>
           }
         />

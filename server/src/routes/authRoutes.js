@@ -13,6 +13,10 @@ const {
   verifyEmailOTP,
   completeRegistration,
   resendEmailOTP,
+  forgotPassword,
+  verifyResetOTP,
+  resetPassword,
+  resendResetOTP,
 } = require('../controllers/authController');
 
 router.post('/register', register);
@@ -30,5 +34,11 @@ router.post('/send-email-otp', sendEmailOTP);
 router.post('/verify-email-otp', verifyEmailOTP); 
 router.post('/complete-registration', completeRegistration);
 router.post('/resend-email-otp', resendEmailOTP);
+
+// Forgot Password routes
+router.post('/forgot-password', forgotPassword);
+router.post('/verify-reset-otp', verifyResetOTP);
+router.post('/reset-password', resetPassword);
+router.post('/resend-reset-otp', resendResetOTP);
 
 module.exports = router;

@@ -5,12 +5,14 @@ import { signInWithGoogle } from '../config/firebaseConfig';
 import Reveal from '../components/Reveal';
 import MotionImage from '../components/MotionImage';
 import GramsLogo from '../components/GramsLogo';
-import { googleLogin } from '../Services/operations/authAPI';
+import { googleLogin, login } from '../Services/operations/authAPI';
 import { toast } from 'react-hot-toast';
 
 export default function LoginPageNew() {
   const [activeTab, setActiveTab] = useState('citizen');
   const [formData, setFormData] = useState({
+    citizenEmail: '',
+    citizenPassword: '',
     adminEmail: '',
     adminPassword: '',
     engId: '',
@@ -98,25 +100,38 @@ export default function LoginPageNew() {
   const handleSubmit = async (e, role) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     
     try {
-      // Simulate API call - replace with actual API endpoint
-      const endpoint = role === 'citizen' ? '/api/auth/citizen-login' : 
-                      role === 'admin' ? '/api/auth/admin-login' : 
-                      '/api/auth/engineer-login';
+      let email, password;
       
-      // For demo purposes, set dummy auth
-      setTimeout(() => {
-        setUser({
-          name: role === 'citizen' ? 'Pradeep Kumar' : role === 'admin' ? 'Admin User' : 'Engineer',
-          email: formData.adminEmail || 'user@grams.gov.in',
-          role: role.charAt(0).toUpperCase() + role.slice(1)
-        });
-        navigate('/dashboard');
+      if (role === 'citizen') {
+        email = formData.citizenEmail;
+        password = formData.citizenPassword;
+      } else if (role === 'admin') {
+        email = formData.adminEmail;
+        password = formData.adminPassword;
+      } else if (role === 'engineer') {
+        email = formData.engId;
+        password = formData.engPasscode;
+      }
+      
+      if (!email || !password) {
+        setError('Please enter both email and password');
         setLoading(false);
-      }, 1000);
+        return;
+      }
+      
+      const result = await login({ email, password }, navigate);
+      
+      if (result) {
+        setUser(result.user);
+        setToken(result.token);
+      }
     } catch (error) {
       console.error('Login failed:', error);
+      setError(error?.response?.data?.message || 'Login failed. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
@@ -360,6 +375,12 @@ export default function LoginPageNew() {
                           required 
                         />
                       </div>
+                    </div>
+
+                    <div className="flex justify-end mb-4">
+                      <Link to="/forgot-password" className="text-xs text-green-600 hover:text-green-700 font-semibold hover:underline">
+                        Forgot Password?
+                      </Link>
                     </div>
 
                     <button 

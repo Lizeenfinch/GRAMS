@@ -22,7 +22,7 @@ export const setupRecaptcha = (containerId) => {
   // Check if container exists
   const container = document.getElementById(containerId);
   if (!container) {
-    console.error(`reCAPTCHA container with id '${containerId}' not found`);
+    console.error(`reCAPTCHA container with id '${containerId}' not found`);  
     return;
   }
 
@@ -117,7 +117,7 @@ export const verifyPhoneOTP = async (otp) => {
   } catch (error) {
     console.error('Error verifying OTP:', error);
     throw error;
-  }
+  } 
 };
 
 export default app;
